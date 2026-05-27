@@ -368,6 +368,22 @@
             display: flex; gap: 6px; justify-content: center;
             padding: 32px 0;
         }
+        .oracle-loading {
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; gap: 4px;
+            padding: 16px 0;
+        }
+        .oracle-loading-msg {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.05rem;
+            color: var(--gold);
+            letter-spacing: 0.03em;
+            text-align: center;
+            opacity: 1;
+            transition: opacity 0.25s ease;
+            text-shadow: 0 0 8px rgba(212,175,55,0.35);
+        }
+        .oracle-loading .loading-dots { padding: 8px 0; }
         .dot {
             width: 8px; height: 8px;
             border-radius: 50%; background: var(--gold);
@@ -1164,9 +1180,29 @@ function showResultScreen(q, drawn, reversed) {
         </div>`;
     }).join('');
 
-    // reset
+    // reset — show Zeus-themed rotating loading messages
     document.getElementById('stream-content').innerHTML =
-        '<div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
+        '<div class="oracle-loading">' +
+          '<div class="oracle-loading-msg" id="oracle-loading-msg">⚡ The Oracle of Zeus unfolds...</div>' +
+          '<div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>' +
+        '</div>';
+    // rotate the message every 2.5s until AI text starts arriving
+    (function startOracleRotation(){
+        const msgs = [
+            '⚡ The Oracle of Zeus unfolds...',
+            '🔮 Reading the energy of your cards...',
+            '✨ Channeling the message...'
+        ];
+        let i = 0;
+        if (window._oracleRotator) clearInterval(window._oracleRotator);
+        window._oracleRotator = setInterval(() => {
+            const el = document.getElementById('oracle-loading-msg');
+            if (!el) { clearInterval(window._oracleRotator); window._oracleRotator = null; return; }
+            i = (i + 1) % msgs.length;
+            el.style.opacity = '0';
+            setTimeout(() => { if (el) { el.textContent = msgs[i]; el.style.opacity = '1'; } }, 250);
+        }, 2500);
+    })();
     document.getElementById('metrics-box').style.display    = 'none';
     document.getElementById('metrics-box').innerHTML        = '';
     document.getElementById('decision-layers').style.display = 'none';
@@ -1203,6 +1239,8 @@ async function streamReading(question, drawn, reversed) {
 
         const contentEl = document.getElementById('stream-content');
         contentEl.innerHTML = '';
+        // streaming begins → stop the rotating loading message
+        if (window._oracleRotator) { clearInterval(window._oracleRotator); window._oracleRotator = null; }
 
         while (true) {
             const { done, value } = await reader.read();
@@ -1369,6 +1407,66 @@ function renderDecisionLayersEN(layers) {
                 ${triggers.map(tr => `<div>[${tr.stage}] ${tr.action}</div>`).join('')}
             </div>
         </div>`;
+    }
+
+    // Card Narrative (Past / Present / Future card meanings)
+    const narr = SERVER_METRICS && SERVER_METRICS.cardNarrative;
+    if (Array.isArray(narr) && narr.length) {
+        html += `<div class="layer-box">
+            <div class="layer-title">🃏 Card Narrative</div>
+            <div class="layer-content">
+                ${narr.map(line => `<div style="margin: 4px 0;">${line}</div>`).join('')}
+            </div>
+        </div>`;
+    }
+
+    // Signal layer (Past / Current / Future + verdict)
+    const sig = layers.signal;
+    if (sig && (sig.past || sig.current || sig.future || sig.summary || sig.verdict)) {
+        html += `<div class="layer-box">
+            <div class="layer-title">📡 Signal</div>
+            <div class="layer-content">
+                ${sig.past    ? `<div>⬅️ <strong>Past:</strong> ${sig.past}</div>` : ''}
+                ${sig.current ? `<div>⏺️ <strong>Present:</strong> ${sig.current}</div>` : ''}
+                ${sig.future  ? `<div>➡️ <strong>Future:</strong> ${sig.future}</div>` : ''}
+                ${sig.summary ? `<div style="margin-top:6px;opacity:0.9;">${sig.summary}</div>` : ''}
+                ${sig.verdict ? `<div style="margin-top:4px;"><em>Verdict: ${sig.verdict}</em></div>` : ''}
+            </div>
+        </div>`;
+    }
+
+    // Risk layer
+    const r = layers.risk;
+    if (r && (r.level || (r.cautions && r.cautions.length))) {
+        html += `<div class="layer-box">
+            <div class="layer-title">⚠️ Risk</div>
+            <div class="layer-content">
+                ${r.level ? `<div>Level: <strong>${r.level}</strong></div>` : ''}
+                ${(r.cautions || []).map(c => `<div>• ${c}</div>`).join('')}
+            </div>
+        </div>`;
+    }
+
+    // Rules / Principles
+    if (Array.isArray(layers.rules) && layers.rules.length) {
+        html += `<div class="layer-box">
+            <div class="layer-title">📜 Guiding Principles</div>
+            <div class="layer-content">
+                ${layers.rules.map(rule => `<div>• ${rule}</div>`).join('')}
+            </div>
+        </div>`;
+    }
+
+    // Critical Interpretation (deep card combo reading)
+    const ci = layers.criticalInterpretation;
+    if (ci && (ci.summary || ci.detail || (typeof ci === 'string' && ci.length))) {
+        const text = typeof ci === 'string' ? ci : (ci.detail || ci.summary || '');
+        if (text) {
+            html += `<div class="layer-box" style="border-left-color: var(--gold);">
+                <div class="layer-title">🔍 Deep Interpretation</div>
+                <div class="layer-content" style="white-space: pre-wrap;">${text}</div>
+            </div>`;
+        }
     }
 
     el.innerHTML = html;
