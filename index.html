@@ -28,6 +28,8 @@
             --gold:       #D4AF37;
             --gold-light: #F1C40F;
             --gold-dim:   rgba(212,175,55,0.35);
+            --emerald:    #27AE60;
+            --emerald-glow: rgba(39,174,96,0.45);
             --bg:         #0A0A14;
             --bg2:        #10101E;
             --bg3:        #15152A;
@@ -279,8 +281,18 @@
 
         /* Stream text */
         #stream-content {
-            font-size: 0.88rem; line-height: 1.75;
+            font-size: 0.92rem; line-height: 1.8;
             color: var(--text); min-height: 120px;
+            padding: 18px 18px;
+            border-radius: 16px;
+            background: rgba(255,255,255,0.035);
+            /* gold + emerald double frame */
+            border: 1.5px solid var(--gold);
+            box-shadow:
+                0 0 0 1.5px var(--emerald) inset,
+                0 0 18px rgba(212,175,55,0.22),
+                0 0 22px var(--emerald-glow);
+            margin: 8px 0 4px;
         }
         #stream-content .section-label {
             font-family: 'Cormorant Garamond', serif;
