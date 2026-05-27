@@ -369,21 +369,28 @@
             padding: 32px 0;
         }
         .oracle-loading {
-            display: flex; flex-direction: column; align-items: center;
-            justify-content: center; gap: 4px;
-            padding: 16px 0;
+            display: block;
+            text-align: center;
+            padding: 40px 20px;
+            min-height: 120px;
+            width: 100%;
+            box-sizing: border-box;
         }
         .oracle-loading-msg {
             font-family: 'Cormorant Garamond', serif;
-            font-size: 1.05rem;
-            color: var(--gold);
-            letter-spacing: 0.03em;
+            font-size: 1.35rem;
+            font-weight: 500;
+            color: #F1C40F;
+            letter-spacing: 0.04em;
             text-align: center;
             opacity: 1;
             transition: opacity 0.25s ease;
-            text-shadow: 0 0 8px rgba(212,175,55,0.35);
+            text-shadow: 0 0 12px rgba(241,196,15,0.6), 0 0 4px rgba(241,196,15,0.9);
+            margin: 0 auto 18px;
+            display: block;
+            line-height: 1.5;
         }
-        .oracle-loading .loading-dots { padding: 8px 0; }
+        .oracle-loading .loading-dots { padding: 6px 0; justify-content: center; display: flex; gap: 6px; }
         .dot {
             width: 8px; height: 8px;
             border-radius: 50%; background: var(--gold);
@@ -1195,6 +1202,7 @@ function showResultScreen(q, drawn, reversed) {
         ];
         let i = 0;
         if (window._oracleRotator) clearInterval(window._oracleRotator);
+        window._oracleStartTime = Date.now();
         window._oracleRotator = setInterval(() => {
             const el = document.getElementById('oracle-loading-msg');
             if (!el) { clearInterval(window._oracleRotator); window._oracleRotator = null; return; }
@@ -1238,9 +1246,8 @@ async function streamReading(question, drawn, reversed) {
         let   metricsReceived = false;
 
         const contentEl = document.getElementById('stream-content');
-        contentEl.innerHTML = '';
-        // streaming begins → stop the rotating loading message
-        if (window._oracleRotator) { clearInterval(window._oracleRotator); window._oracleRotator = null; }
+        // Keep the rotating loading message visible until the first AI token arrives.
+        // (Don't wipe contentEl here — that erased the loader and left users staring at a blank box.)
 
         while (true) {
             const { done, value } = await reader.read();
@@ -1263,6 +1270,9 @@ async function streamReading(question, drawn, reversed) {
                             console.table(parsed.data);
                         }
                     } else if (parsed._type === 'token') {
+                        // First real AI token arriving — now we can stop the loader and start rendering.
+                        if (window._oracleRotator) { clearInterval(window._oracleRotator); window._oracleRotator = null; }
+                        if (fullText === '') contentEl.innerHTML = '';
                         fullText += parsed.text;
                         contentEl.innerHTML = renderStreamText(fullText);
                     } else if (parsed._type === 'done') {
