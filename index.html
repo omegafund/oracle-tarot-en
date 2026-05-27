@@ -278,6 +278,19 @@
         }
         .card-name { font-size: 0.78rem; color: var(--text); font-weight: 600; line-height: 1.3; }
         .card-rev  { font-size: 0.65rem; color: rgba(231,76,60,0.85); }
+        .card-img-wrap {
+            width: 100%; margin: 0 auto 7px;
+            border-radius: 8px; overflow: hidden;
+            border: 1px solid var(--gold-dim);
+            background: rgba(0,0,0,0.25);
+            aspect-ratio: 2 / 3;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .card-img {
+            width: 100%; height: 100%; object-fit: cover;
+            display: block;
+        }
+        .card-img.reversed { transform: rotate(180deg); }
 
         /* Stream text */
         #stream-content {
@@ -1125,13 +1138,21 @@ function showResultScreen(q, drawn, reversed) {
 
     // cards row
     const row = document.getElementById('cards-row');
-    row.innerHTML = drawn.map((c, i) => `
+    row.innerHTML = drawn.map((c, i) => {
+        const idx = TAROT_CARDS_78.indexOf(c);
+        const num = idx >= 0 ? String(idx).padStart(2, '0') : '00';
+        const imgUrl = `https://omegafund.github.io/oracle-tarot-pro/images/cards/m${num}.jpg`;
+        return `
         <div class="card-item">
             <div class="card-label">${['Past','Present','Future'][i]}</div>
+            <div class="card-img-wrap">
+                <img class="card-img${reversed[i] ? ' reversed' : ''}" src="${imgUrl}" alt="${c}" loading="lazy"
+                     onerror="this.style.display='none'">
+            </div>
             <div class="card-name">${c}</div>
             ${reversed[i] ? '<div class="card-rev">↓ Reversed</div>' : ''}
-        </div>
-    `).join('');
+        </div>`;
+    }).join('');
 
     // reset
     document.getElementById('stream-content').innerHTML =
