@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>ZEUS Oracle — Reveal Your Path</title>
+
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <!-- Favicon (place these files in repo root)                     -->
+    <!--   • favicon.ico        (32×32, traditional)                 -->
+    <!--   • favicon-32x32.png  (modern browsers)                    -->
+    <!--   • apple-touch-icon.png (180×180, iOS)                     -->
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <link rel="icon" type="image/x-icon" href="./favicon.ico?v=1">
+    <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.png?v=1">
+    <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png?v=1">
+    <meta name="theme-color" content="#D4AF37">
+    <meta name="description" content="ZEUS Oracle — Data-driven tarot readings with 5-layer decision analysis. Reveal your path.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        /* ══════════════════════════════════
+           ZEUS ORACLE — EN Design System
+           ══════════════════════════════════ */
+        :root {
+            --gold:       #D4AF37;
+            --gold-light: #F1C40F;
+            --gold-dim:   rgba(212,175,55,0.35);
+            --bg:         #0A0A14;
+            --bg2:        #10101E;
+            --bg3:        #15152A;
+            --text:       #F0EDE8;
+            --text-dim:   rgba(240,237,232,0.65);
+
+            /* Category colors */
+            --love:    #E84393;
+            --fortune: #9B59B6;
+            --decision:#D4AF37;
+            --stock:   #27AE60;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            overscroll-behavior: none;
+        }
+
+        /* ── Starfield ── */
+        .stars-bg {
+            position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
+        }
+        .star {
+            position: absolute; border-radius: 50%;
+            background: rgba(212,175,55,0.6);
+            animation: twinkle var(--dur, 3s) ease-in-out infinite;
+        }
+        @keyframes twinkle {
+            0%,100% { opacity: 0.2; transform: scale(1); }
+            50%      { opacity: 0.9; transform: scale(1.3); }
+        }
+
+        /* ══ Layout ══ */
+        #app { position: relative; z-index: 1; min-height: 100vh; }
+
+        /* ══ HOME SCREEN ══ */
+        #home-screen {
+            display: flex; flex-direction: column;
+            align-items: center; padding: 0 16px 40px;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .home-header {
+            width: 100%; max-width: 440px;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 18px 0 10px;
+        }
+        .logo-text {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.3rem; font-weight: 700;
+            background: linear-gradient(135deg, #D4AF37, #F1C40F);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            letter-spacing: 0.12em;
+        }
+        .header-badge {
+            font-size: 0.65rem; font-weight: 800; letter-spacing: 0.12em;
+            color: var(--gold); border: 1px solid var(--gold-dim);
+            padding: 3px 8px; border-radius: 20px;
+        }
+
+        /* Hero */
+        .hero {
+            width: 100%; max-width: 440px;
+            text-align: center; padding: 24px 0 28px;
+        }
+        .hero-eyebrow {
+            font-size: 0.68rem; font-weight: 700; letter-spacing: 0.25em;
+            color: var(--gold); text-transform: uppercase; margin-bottom: 14px;
+        }
+        .hero-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(2rem, 8vw, 2.8rem);
+            font-weight: 700; line-height: 1.1;
+            color: #fff; margin-bottom: 12px;
+        }
+        .hero-title span {
+            background: linear-gradient(135deg, #D4AF37, #F1C40F);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .hero-sub {
+            font-size: 0.88rem; color: var(--text-dim);
+            font-weight: 400; letter-spacing: 0.02em; line-height: 1.6;
+        }
+
+        /* ── MAIN CARD (Relationship — 크게) ── */
+        .main-category-card {
+            width: 100%; max-width: 440px;
+            cursor: pointer;
+            background: linear-gradient(135deg,
+                rgba(232,67,147,0.18) 0%,
+                rgba(155,89,182,0.12) 100%);
+            border: 1.5px solid rgba(232,67,147,0.45);
+            border-radius: 18px;
+            padding: 26px 24px;
+            margin-bottom: 14px;
+            transition: all 0.28s ease;
+            position: relative; overflow: hidden;
+        }
+        .main-category-card::before {
+            content: ''; position: absolute;
+            top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(232,67,147,0.6), transparent);
+        }
+        .main-category-card:hover, .main-category-card:active {
+            transform: translateY(-2px);
+            border-color: rgba(232,67,147,0.75);
+            box-shadow: 0 8px 32px rgba(232,67,147,0.25);
+        }
+        .main-cat-icon  { font-size: 2.2rem; margin-bottom: 10px; display: block; }
+        .main-cat-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.65rem; font-weight: 700;
+            color: #fff; margin-bottom: 6px;
+        }
+        .main-cat-copy  {
+            font-size: 0.88rem; color: rgba(232,67,147,0.95);
+            font-weight: 500; margin-bottom: 8px;
+        }
+        .main-cat-sub   {
+            font-size: 0.78rem; color: var(--text-dim); line-height: 1.5;
+        }
+        .main-cat-arrow {
+            position: absolute; right: 22px; top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.4rem; color: rgba(232,67,147,0.7);
+        }
+
+        /* ── SUB GRID (3개) ── */
+        .sub-grid {
+            width: 100%; max-width: 440px;
+            display: grid; grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px; margin-bottom: 20px;
+        }
+        .sub-card {
+            cursor: pointer; border-radius: 14px;
+            padding: 16px 12px; text-align: center;
+            transition: all 0.25s ease; position: relative; overflow: hidden;
+        }
+        .sub-card.fortune  {
+            background: rgba(155,89,182,0.12);
+            border: 1.5px solid rgba(155,89,182,0.38);
+        }
+        .sub-card.decision {
+            background: rgba(212,175,55,0.10);
+            border: 1.5px solid rgba(212,175,55,0.35);
+        }
+        .sub-card.stock    {
+            background: rgba(39,174,96,0.10);
+            border: 1.5px solid rgba(39,174,96,0.35);
+        }
+        .sub-card:hover, .sub-card:active { transform: translateY(-2px); }
+        .sub-card.fortune:hover  { box-shadow: 0 6px 20px rgba(155,89,182,0.25); }
+        .sub-card.decision:hover { box-shadow: 0 6px 20px rgba(212,175,55,0.20); }
+        .sub-card.stock:hover    { box-shadow: 0 6px 20px rgba(39,174,96,0.20); }
+        .sub-icon  { font-size: 1.5rem; display: block; margin-bottom: 7px; }
+        .sub-title {
+            font-size: 0.82rem; font-weight: 800;
+            color: #fff; margin-bottom: 4px;
+        }
+        .sub-copy  {
+            font-size: 0.65rem; line-height: 1.4;
+            font-weight: 400;
+        }
+        .sub-card.fortune  .sub-copy { color: rgba(155,89,182,0.9); }
+        .sub-card.decision .sub-copy { color: rgba(212,175,55,0.9); }
+        .sub-card.stock    .sub-copy { color: rgba(39,174,96,0.9); }
+
+        /* ── INPUT AREA ── */
+        #input-area {
+            width: 100%; max-width: 440px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--gold-dim);
+            border-radius: 16px; padding: 16px;
+        }
+        .input-domain-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 5px 12px; border-radius: 20px;
+            font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em;
+            margin-bottom: 12px;
+        }
+        .badge-stock    { background: rgba(39,174,96,0.18); color: #27AE60; border: 1px solid rgba(39,174,96,0.3); }
+        .badge-fortune  { background: rgba(155,89,182,0.18); color: #9B59B6; border: 1px solid rgba(155,89,182,0.3); }
+        .badge-love     { background: rgba(232,67,147,0.18); color: #E84393; border: 1px solid rgba(232,67,147,0.3); }
+        .badge-decision { background: rgba(212,175,55,0.18); color: #D4AF37; border: 1px solid rgba(212,175,55,0.3); }
+
+        textarea#question-input {
+            width: 100%; background: transparent; border: none; outline: none;
+            color: var(--text); font-family: 'Inter', sans-serif;
+            font-size: 0.95rem; font-weight: 400; line-height: 1.6;
+            resize: none; min-height: 70px;
+            placeholder-color: var(--text-dim);
+        }
+        textarea#question-input::placeholder { color: var(--text-dim); }
+
+        .input-bottom {
+            display: flex; align-items: center;
+            justify-content: space-between; margin-top: 12px;
+        }
+        .char-count { font-size: 0.68rem; color: var(--text-dim); }
+        .reveal-btn {
+            background: linear-gradient(135deg, #D4AF37, #F1C40F);
+            color: #000; border: none; border-radius: 10px;
+            padding: 10px 22px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.82rem; font-weight: 900;
+            letter-spacing: 0.06em; cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .reveal-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(212,175,55,0.4); }
+        .reveal-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* ══ RESULT SCREEN ══ */
+        #result-screen { display: none; padding: 16px; min-height: 100vh; }
+        .result-wrap { max-width: 440px; margin: 0 auto; }
+        .result-header {
+            display: flex; align-items: center;
+            justify-content: space-between; margin-bottom: 18px;
+        }
+        .back-btn {
+            background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+            color: var(--text); border-radius: 8px; padding: 7px 14px;
+            font-size: 0.78rem; font-weight: 600; cursor: pointer;
+        }
+        .result-domain-badge {
+            font-size: 0.68rem; font-weight: 800; letter-spacing: 0.12em;
+            padding: 4px 10px; border-radius: 20px;
+        }
+
+        /* Cards display */
+        .cards-row {
+            display: grid; grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px; margin-bottom: 18px;
+        }
+        .card-item {
+            text-align: center;
+            background: rgba(255,255,255,0.04);
+            border-radius: 10px; padding: 10px 6px;
+        }
+        .card-label {
+            font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em;
+            color: var(--gold); text-transform: uppercase; margin-bottom: 5px;
+        }
+        .card-name { font-size: 0.78rem; color: var(--text); font-weight: 600; line-height: 1.3; }
+        .card-rev  { font-size: 0.65rem; color: rgba(231,76,60,0.85); }
+
+        /* Stream text */
+        #stream-content {
+            font-size: 0.88rem; line-height: 1.75;
+            color: var(--text); min-height: 120px;
+        }
+        #stream-content .section-label {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1rem; font-weight: 700; color: var(--gold);
+            margin: 18px 0 6px; display: block;
+            letter-spacing: 0.06em;
+        }
+
+        /* Metrics box */
+        .metrics-box {
+            margin: 14px 0 8px;
+            padding: 14px 16px;
+            background: linear-gradient(135deg, rgba(212,175,55,0.08), rgba(0,0,0,0.3));
+            border: 1px solid rgba(212,175,55,0.25);
+            border-radius: 10px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 8px;
+        }
+        .metric-item {
+            display: flex; align-items: center; gap: 7px;
+            padding: 7px 10px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 7px;
+        }
+        .metric-icon { font-size: 1rem; }
+        .metric-label {
+            font-size: 0.62rem; color: rgba(255,215,112,0.75);
+            letter-spacing: 0.08em; font-weight: 700;
+        }
+        .metric-value { font-size: 0.88rem; color: #fff; font-weight: 800; }
+
+        /* Decision layers */
+        .layer-box {
+            margin-bottom: 12px; padding: 14px 16px;
+            border-radius: 10px; border-left: 3px solid var(--gold);
+            background: rgba(255,255,255,0.03);
+        }
+        .layer-title {
+            font-size: 0.72rem; font-weight: 900;
+            letter-spacing: 0.12em; text-transform: uppercase;
+            color: var(--gold); margin-bottom: 8px;
+        }
+        .layer-content { font-size: 0.84rem; color: var(--text); line-height: 1.6; }
+        .layer-value   { font-size: 0.9rem;  color: #fff; font-weight: 700; }
+
+        /* Loading */
+        .loading-dots {
+            display: flex; gap: 6px; justify-content: center;
+            padding: 32px 0;
+        }
+        .dot {
+            width: 8px; height: 8px;
+            border-radius: 50%; background: var(--gold);
+            animation: bounce 1.2s ease-in-out infinite;
+        }
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce {
+            0%,80%,100% { transform: scale(0.6); opacity: 0.4; }
+            40%          { transform: scale(1.1); opacity: 1; }
+        }
+
+        /* PRO unlock */
+        .pro-unlock {
+            margin-top: 20px; padding: 18px;
+            background: linear-gradient(135deg, rgba(212,175,55,0.12), rgba(0,0,0,0.4));
+            border: 1px solid rgba(212,175,55,0.4); border-radius: 14px;
+            text-align: center;
+        }
+        .pro-title { font-size: 1rem; font-weight: 800; color: var(--gold); margin-bottom: 8px; }
+        .pro-list  { font-size: 0.8rem; color: var(--text-dim); line-height: 1.8; margin-bottom: 14px; }
+        .pro-btn {
+            display: inline-block; background: linear-gradient(135deg, #D4AF37, #F1C40F);
+            color: #000; border: none; border-radius: 10px;
+            padding: 12px 28px; font-weight: 900;
+            font-size: 0.88rem; cursor: pointer;
+            letter-spacing: 0.04em;
+        }
+
+        /* Disclaimer */
+        .disclaimer {
+            margin-top: 24px; padding: 12px 14px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+            font-size: 0.68rem; color: var(--text-dim); line-height: 1.6;
+        }
+
+        /* ══ PAYWALL MODAL (Step 1) ══ */
+        .paywall-overlay {
+            position: fixed; inset: 0; z-index: 9999;
+            background: rgba(0, 0, 0, 0.82);
+            backdrop-filter: blur(8px);
+            display: none; align-items: center; justify-content: center;
+            padding: 16px;
+        }
+        .paywall-overlay.show { display: flex; }
+        .paywall-card {
+            background: linear-gradient(135deg, #15152A 0%, #10101E 100%);
+            border: 1px solid rgba(212,175,55,0.5);
+            border-radius: 18px;
+            padding: 28px 22px;
+            max-width: 380px; width: 100%;
+            box-shadow: 0 20px 60px rgba(212,175,55,0.15);
+        }
+        .paywall-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.5rem; font-weight: 700;
+            color: var(--gold);
+            text-align: center; margin-bottom: 6px;
+            letter-spacing: 0.02em;
+        }
+        .paywall-reason {
+            font-size: 0.78rem; color: var(--text-dim);
+            text-align: center; margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        .plan-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+        .plan-card {
+            background: rgba(212,175,55,0.06);
+            border: 1px solid rgba(212,175,55,0.25);
+            border-radius: 12px;
+            padding: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .plan-card:hover, .plan-card:active {
+            background: rgba(212,175,55,0.14);
+            border-color: var(--gold);
+        }
+        .plan-card.featured {
+            border-color: var(--gold);
+            background: linear-gradient(135deg, rgba(212,175,55,0.12), rgba(212,175,55,0.04));
+        }
+        .plan-card.featured::after {
+            content: 'BEST VALUE';
+            position: absolute; top: -8px; right: 10px;
+            background: var(--gold); color: #000;
+            font-size: 0.6rem; font-weight: 900;
+            padding: 2px 8px; border-radius: 6px;
+            letter-spacing: 0.08em;
+        }
+        .plan-name { font-size: 0.92rem; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+        .plan-desc { font-size: 0.7rem; color: var(--text-dim); margin-bottom: 6px; }
+        .plan-price { font-size: 1.1rem; font-weight: 800; color: var(--gold); }
+        .plan-price-sub { font-size: 0.65rem; color: var(--text-dim); margin-left: 6px; }
+        .paywall-close {
+            display: block; width: 100%;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.15);
+            color: var(--text-dim);
+            border-radius: 10px;
+            padding: 10px;
+            font-size: 0.78rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .paywall-close:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+        .paywall-test-banner {
+            background: rgba(255, 200, 0, 0.08);
+            border: 1px dashed rgba(255, 200, 0, 0.3);
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 0.65rem; color: rgba(255, 200, 0, 0.85);
+            text-align: center; margin-bottom: 14px;
+        }
+
+        /* ══ PREMIUM STATUS BADGE ══ */
+        .user-status {
+            position: fixed; top: 12px; right: 12px;
+            z-index: 100;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(212,175,55,0.3);
+            border-radius: 20px;
+            padding: 5px 12px;
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            cursor: pointer;
+        }
+        .user-status.premium {
+            color: var(--gold);
+            border-color: var(--gold);
+            background: rgba(212,175,55,0.1);
+        }
+
+        /* ══ PREMIUM GATE — auto blur for [data-premium-gate] ══ */
+        [data-premium-gate].locked {
+            filter: blur(6px);
+            pointer-events: none;
+            user-select: none;
+            position: relative;
+        }
+        [data-premium-gate].locked::after {
+            content: '🔒 Premium Required';
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.4);
+            color: var(--gold); font-weight: 700;
+            filter: blur(0); pointer-events: auto;
+            cursor: pointer;
+        }
+
+        /* Mobile */
+        @media (max-width: 380px) {
+            .hero-title { font-size: 1.75rem; }
+            .main-cat-title { font-size: 1.35rem; }
+            .sub-title { font-size: 0.75rem; }
+            .paywall-card { padding: 22px 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Starfield -->
+<div class="stars-bg" id="stars-bg"></div>
+
+<div id="app">
+
+    <!-- ══ HOME SCREEN ══ -->
+    <div id="home-screen">
+
+        <!-- Header -->
+        <div class="home-header">
+            <div class="logo-text">⚡ ZEUS ORACLE</div>
+            <div class="header-badge">AI TAROT</div>
+        </div>
+
+        <!-- Hero -->
+        <div class="hero">
+            <div class="hero-eyebrow">✦ Three Cards · One Truth</div>
+            <h1 class="hero-title">Reveal<br><span>Your Path</span></h1>
+            <p class="hero-sub">Ancient wisdom meets AI precision.<br>Ask anything — the cards answer.</p>
+        </div>
+
+        <!-- MAIN CARD — Relationship (크게) -->
+        <div class="main-category-card" onclick="selectDomain('love')" id="card-love">
+            <span class="main-cat-icon">❤️</span>
+            <div class="main-cat-title">Relationship</div>
+            <div class="main-cat-copy">Love, attraction &amp; hidden truth</div>
+            <div class="main-cat-sub">What does your heart really want?<br>The cards reveal the energy between you.</div>
+            <div class="main-cat-arrow">›</div>
+        </div>
+
+        <!-- SUB GRID — Fortune / Decision / Inner Abundance -->
+        <div class="sub-grid">
+            <div class="sub-card fortune" onclick="selectDomain('fortune')">
+                <span class="sub-icon">🔮</span>
+                <div class="sub-title">Fortune</div>
+                <div class="sub-copy">Your near future revealed</div>
+            </div>
+            <div class="sub-card decision" onclick="selectDomain('decision')">
+                <span class="sub-icon">⚖️</span>
+                <div class="sub-title">Decision</div>
+                <div class="sub-copy">Clarity when choices matter</div>
+            </div>
+            <div class="sub-card stock" onclick="selectDomain('stock')">
+                <span class="sub-icon">🌱</span>
+                <div class="sub-title">Inner Abundance</div>
+                <div class="sub-copy">Your relationship with value, self-worth &amp; inner abundance</div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div id="input-area" style="display:none;">
+            <div id="domain-badge" class="input-domain-badge badge-fortune">🔮 Fortune Reading</div>
+            <textarea id="question-input" rows="3"
+                placeholder="Ask your question here... (e.g. 'What energy is shaping my path right now?')"
+                oninput="updateCharCount()" maxlength="200"></textarea>
+            <div class="input-bottom">
+                <div class="char-count"><span id="char-count">0</span>/200</div>
+                <button class="reveal-btn" id="reveal-btn" onclick="startReading()">
+                    Reveal My Path ✦
+                </button>
+            </div>
+        </div>
+
+        <div class="disclaimer" style="max-width:440px; margin-top:20px; width:100%;">
+            ⚠️ ZEUS Oracle provides tarot energy interpretations for entertainment and reflection only.
+            This is not financial, legal, or professional advice.
+        </div>
+
+    </div><!-- /home-screen -->
+
+    <!-- ══ RESULT SCREEN ══ -->
+    <div id="result-screen">
+        <div class="result-wrap">
+            <div class="result-header">
+                <button class="back-btn" onclick="goHome()">← Back</button>
+                <div id="result-domain-badge" class="result-domain-badge badge-fortune">🔮 Fortune</div>
+            </div>
+
+            <!-- Cards row -->
+            <div class="cards-row" id="cards-row"></div>
+
+            <!-- Stream text -->
+            <div id="stream-content">
+                <div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+            </div>
+
+            <!-- Metrics box -->
+            <div id="metrics-box" style="display:none;"></div>
+
+            <!-- Decision layers (paid) -->
+            <div id="decision-layers" data-premium-gate style="display:none;"></div>
+
+            <!-- PRO unlock (free) -->
+            <div id="pro-unlock" class="pro-unlock" style="display:none;">
+                <div class="pro-title">🔓 Unlock PRO Reading</div>
+                <div class="pro-list">
+                    → Exact entry &amp; exit timing<br>
+                    → 5-layer deep analysis<br>
+                    → Real card interpretation<br>
+                    → Your future card revealed
+                </div>
+                <button class="pro-btn" onclick="showPayModal()">Unlock Full Reading</button>
+            </div>
+
+        </div>
+    </div><!-- /result-screen -->
+
+</div><!-- /app -->
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- [Step 1] PAYWALL MODAL — Stripe-ready                         -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="paywall-overlay" id="paywall-overlay" onclick="if(event.target===this) hidePaywall()">
+    <div class="paywall-card">
+        <div class="paywall-title">Unlock the Full Oracle</div>
+        <div class="paywall-reason" id="paywall-reason">Reveal your complete 5-layer reading</div>
+
+        <div class="paywall-test-banner" id="paywall-test-banner">
+            ⚠️ TEST MODE — Stripe integration pending
+        </div>
+
+        <div class="plan-list" id="plan-list">
+            <!-- Plans rendered by JS -->
+        </div>
+
+        <button class="paywall-close" onclick="hidePaywall()">Maybe later</button>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- [Step 1] USER STATUS BADGE                                     -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="user-status" id="user-status" onclick="onUserStatusClick()">🔒 Free Tier</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+// ZEUS ORACLE — EN Client
+// ══════════════════════════════════════════════════════════════════
+const WORKER_URL = 'https://tarot-api-en.omegafund01.workers.dev';
+const TAROT_CARDS_78 = [
+    "The Fool","The Magician","The High Priestess","The Empress","The Emperor",
+    "The Hierophant","The Lovers","The Chariot","Strength","The Hermit",
+    "Wheel of Fortune","Justice","The Hanged Man","Death","Temperance",
+    "The Devil","The Tower","The Star","The Moon","The Sun","Judgement","The World",
+    "Ace of Wands","Two of Wands","Three of Wands","Four of Wands","Five of Wands",
+    "Six of Wands","Seven of Wands","Eight of Wands","Nine of Wands","Ten of Wands",
+    "Page of Wands","Knight of Wands","Queen of Wands","King of Wands",
+    "Ace of Cups","Two of Cups","Three of Cups","Four of Cups","Five of Cups",
+    "Six of Cups","Seven of Cups","Eight of Cups","Nine of Cups","Ten of Cups",
+    "Page of Cups","Knight of Cups","Queen of Cups","King of Cups",
+    "Ace of Swords","Two of Swords","Three of Swords","Four of Swords","Five of Swords",
+    "Six of Swords","Seven of Swords","Eight of Swords","Nine of Swords","Ten of Swords",
+    "Page of Swords","Knight of Swords","Queen of Swords","King of Swords",
+    "Ace of Pentacles","Two of Pentacles","Three of Pentacles","Four of Pentacles",
+    "Five of Pentacles","Six of Pentacles","Seven of Pentacles","Eight of Pentacles",
+    "Nine of Pentacles","Ten of Pentacles","Page of Pentacles","Knight of Pentacles",
+    "Queen of Pentacles","King of Pentacles"
+];
+
+let CURRENT_DOMAIN = 'fortune';
+let CURRENT_DRAWN_CARDS = [];
+let CURRENT_REVERSED = [];
+let SERVER_METRICS = null;
+
+// ══════════════════════════════════════════════════════════════════
+// [Step 1] PAYMENT INFRASTRUCTURE — Stripe-ready Adapter Pattern
+// ══════════════════════════════════════════════════════════════════
+//   사장님 설계 원칙:
+//     1. unlock 로직 분리 → unlockPremium() 단일 진입점
+//     2. 유저 상태 객체화 → STATE.user
+//     3. handlePayment() 어댑터 → 현재는 즉시 unlock, 미래는 Stripe
+//
+//   현재 작동: 테스트 모드 (즉시 unlock)
+//   Stripe 통합 시 변경 지점: handlePayment() 함수 한 곳만
+// ══════════════════════════════════════════════════════════════════
+
+// ── 글로벌 STATE ──
+const STATE = {
+    user: {
+        isPremium:          false,
+        credits:            0,
+        subscriptionStatus: 'none',   // 'none' | 'active' | 'expired'
+        plan:               null,     // null | 'trial' | 'monthly' | 'yearly' | 'lifetime'
+        expiresAt:          null,     // ms timestamp
+        sessionToken:       null,     // 서버 발급 HMAC 토큰 (Stripe 통합 시 채워짐)
+    },
+    domain:    'fortune',
+    cards:     [],
+    reversed:  [],
+    metrics:   null,
+};
+
+// ── PAYMENT PLANS (Stripe price_id 자리표시자) ──
+const PAYMENT_PLANS = {
+    trial: {
+        id:              'trial',
+        name:            'Trial Reading',
+        desc:            'Single full reading · 1 hour access',
+        price_cents:     99,                                // $0.99
+        currency:        'USD',
+        duration_ms:     60 * 60 * 1000,                    // 1 hour
+        stripe_price_id: 'price_TODO_TRIAL',                // ← Stripe 가입 후 채움
+    },
+    monthly: {
+        id:              'monthly',
+        name:            'Monthly',
+        desc:            'Unlimited readings · billed monthly',
+        price_cents:     999,                               // $9.99
+        currency:        'USD',
+        duration_ms:     30 * 24 * 60 * 60 * 1000,
+        stripe_price_id: 'price_TODO_MONTHLY',
+    },
+    yearly: {
+        id:              'yearly',
+        name:            'Yearly',
+        desc:            'Save 33% · 12 months unlimited',
+        price_cents:     7900,                              // $79.00
+        currency:        'USD',
+        duration_ms:     365 * 24 * 60 * 60 * 1000,
+        stripe_price_id: 'price_TODO_YEARLY',
+        featured:        true,
+    },
+    lifetime: {
+        id:              'lifetime',
+        name:            'Lifetime Access',
+        desc:            'Pay once · forever access',
+        price_cents:     19900,                             // $199.00
+        currency:        'USD',
+        duration_ms:     100 * 365 * 24 * 60 * 60 * 1000,   // 100 years (effectively forever)
+        stripe_price_id: 'price_TODO_LIFETIME',
+    },
+};
+
+// ══════════════════════════════════════════════════════════════════
+// CORE: unlockPremium — 결제 성공 시 호출되는 단일 진입점
+//   현재 호출처: handlePayment() (테스트 모드)
+//   미래 호출처: Stripe webhook 'checkout.session.completed'
+//   원칙: 이 함수는 "어떻게 결제됐는지"를 모름 — 완전 분리
+// ══════════════════════════════════════════════════════════════════
+function unlockPremium(plan = 'monthly', sessionToken = null) {
+    const planData = PAYMENT_PLANS[plan];
+    if (!planData) {
+        console.warn('Unknown plan:', plan);
+        return false;
+    }
+
+    STATE.user.isPremium          = true;
+    STATE.user.subscriptionStatus = 'active';
+    STATE.user.plan               = plan;
+    STATE.user.expiresAt          = Date.now() + planData.duration_ms;
+    if (sessionToken) STATE.user.sessionToken = sessionToken;
+
+    persistUserState();
+    updatePremiumUI();
+
+    console.log(`✅ Premium unlocked: ${plan} (until ${new Date(STATE.user.expiresAt).toISOString()})`);
+    return true;
+}
+
+function lockPremium() {
+    STATE.user.isPremium          = false;
+    STATE.user.subscriptionStatus = 'expired';
+    STATE.user.plan               = null;
+    STATE.user.expiresAt          = null;
+    STATE.user.sessionToken       = null;
+    persistUserState();
+    updatePremiumUI();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// HANDLE PAYMENT — 어댑터 함수 (Stripe 교체 지점)
+//   현재: 워커 /unlock-test 엔드포인트 호출 (테스트 모드)
+//   미래: Stripe 가입 후 STRIPE_SECRET_KEY 설정만 하면 자동으로
+//         /create-checkout-session 사용 — 코드 변경 0
+// ══════════════════════════════════════════════════════════════════
+async function handlePayment(plan = 'monthly') {
+    const planData = PAYMENT_PLANS[plan];
+    if (!planData) return;
+
+    // 사용자 확인
+    const confirmed = confirm(
+        `${planData.name} — $${(planData.price_cents/100).toFixed(2)}\n` +
+        `${planData.desc}\n\n` +
+        `Continue to checkout?`
+    );
+    if (!confirmed) return;
+
+    try {
+        // 1단계: Stripe checkout session 시도
+        const checkoutRes = await fetch(`${WORKER_URL}/create-checkout-session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ plan }),
+        });
+        const checkoutData = await checkoutRes.json();
+
+        // 2-A: Stripe URL 받음 → 리다이렉트
+        if (checkoutData.url && !checkoutData.test_mode) {
+            window.location.href = checkoutData.url;
+            return;
+        }
+
+        // 2-B: 테스트 모드 → /unlock-test 호출
+        if (checkoutData.test_mode || !checkoutRes.ok) {
+            const testRes = await fetch(`${WORKER_URL}/unlock-test`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ plan }),
+            });
+            const testData = await testRes.json();
+            if (testData.ok && testData.token) {
+                unlockPremium(plan, testData.token);
+                hidePaywall();
+                alert(`✅ Test unlock complete!\n\n${planData.name} active.\nReal Stripe coming soon.`);
+                return;
+            }
+            throw new Error(testData.error || 'unlock failed');
+        }
+
+        throw new Error(checkoutData.error || 'checkout failed');
+    } catch (e) {
+        console.error('Payment error:', e);
+        alert(`Payment failed: ${e.message}\n\nPlease try again or contact support.`);
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// CHECK PAYMENT ON RETURN — Stripe 결제 후 success URL 처리
+//   Stripe → /success?session_id=cs_xxx 로 리다이렉트
+//   여기서 세션 ID를 워커에 전달 → 토큰 받아 localStorage 저장
+// ══════════════════════════════════════════════════════════════════
+async function checkPaymentOnReturn() {
+    const params    = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
+    const testMode  = params.get('test_mode');
+    const planParam = params.get('plan');
+
+    // 테스트 모드 리다이렉트 (Stripe 미설정 시)
+    if (testMode === 'true' && planParam) {
+        try {
+            const res = await fetch(`${WORKER_URL}/unlock-test`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ plan: planParam }),
+            });
+            const data = await res.json();
+            if (data.ok && data.token) {
+                unlockPremium(planParam, data.token);
+            }
+        } catch (e) { console.warn('test unlock failed:', e); }
+        // URL 파라미터 정리
+        window.history.replaceState({}, '', window.location.pathname);
+        return;
+    }
+
+    // 실제 Stripe 리다이렉트
+    if (sessionId) {
+        try {
+            const res = await fetch(`${WORKER_URL}/verify-payment`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId }),
+            });
+            const data = await res.json();
+            if (data.ok && data.token) {
+                unlockPremium(data.plan, data.token);
+                alert('✅ Payment successful! Premium activated.');
+            } else {
+                console.warn('Payment verification failed:', data.error);
+            }
+        } catch (e) { console.warn('verify-payment failed:', e); }
+        window.history.replaceState({}, '', window.location.pathname);
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PERSISTENCE — localStorage (V24.8 sanitize 패턴 적용)
+// ══════════════════════════════════════════════════════════════════
+function persistUserState() {
+    try {
+        const data = {
+            isPremium:          STATE.user.isPremium,
+            subscriptionStatus: STATE.user.subscriptionStatus,
+            plan:               STATE.user.plan,
+            expiresAt:          STATE.user.expiresAt,
+            sessionToken:       STATE.user.sessionToken,
+        };
+        localStorage.setItem('zeus_user_state', JSON.stringify(data));
+    } catch (e) {
+        console.warn('Failed to persist state:', e);
+    }
+}
+
+function restoreUserState() {
+    try {
+        const raw = localStorage.getItem('zeus_user_state');
+        if (!raw) { updatePremiumUI(); return; }
+        const data = JSON.parse(raw);
+
+        // 만료 체크
+        if (data.expiresAt && Date.now() > data.expiresAt) {
+            console.log('Subscription expired — locking');
+            lockPremium();
+            return;
+        }
+
+        // [V24.8 패턴] 토큰 sanitize — 비-ASCII 자동 폐기
+        if (data.sessionToken && /[^\x20-\x7E]/.test(data.sessionToken)) {
+            console.warn('Corrupted token detected — clearing state');
+            localStorage.removeItem('zeus_user_state');
+            updatePremiumUI();
+            return;
+        }
+
+        Object.assign(STATE.user, data);
+        updatePremiumUI();
+    } catch (e) {
+        console.warn('Failed to restore state:', e);
+        localStorage.removeItem('zeus_user_state');
+        updatePremiumUI();
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PREMIUM GATE — 점사 결과 잠금/해제
+// ══════════════════════════════════════════════════════════════════
+function isPremium() {
+    if (!STATE.user.isPremium) return false;
+    if (STATE.user.expiresAt && Date.now() > STATE.user.expiresAt) {
+        lockPremium();
+        return false;
+    }
+    return true;
+}
+
+function requirePremium(reason = 'this feature') {
+    if (isPremium()) return true;
+    showPaywall(reason);
+    return false;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// UI — Paywall + Status badge + Auto gate
+// ══════════════════════════════════════════════════════════════════
+function showPaywall(reason = 'Unlock your full reading') {
+    const overlay = document.getElementById('paywall-overlay');
+    const reasonEl = document.getElementById('paywall-reason');
+    const planList = document.getElementById('plan-list');
+    if (!overlay) return;
+
+    if (reasonEl) reasonEl.textContent = reason;
+
+    // 플랜 카드 동적 렌더링
+    if (planList) {
+        planList.innerHTML = Object.values(PAYMENT_PLANS).map(p => `
+            <div class="plan-card${p.featured ? ' featured' : ''}" onclick="handlePayment('${p.id}')">
+                <div class="plan-name">${p.name}</div>
+                <div class="plan-desc">${p.desc}</div>
+                <div>
+                    <span class="plan-price">$${(p.price_cents/100).toFixed(2)}</span>
+                    <span class="plan-price-sub">${p.currency}</span>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    overlay.classList.add('show');
+}
+
+function hidePaywall() {
+    const overlay = document.getElementById('paywall-overlay');
+    if (overlay) overlay.classList.remove('show');
+}
+
+function updatePremiumUI() {
+    // 상태 배지
+    const badge = document.getElementById('user-status');
+    if (badge) {
+        if (isPremium()) {
+            const planName = PAYMENT_PLANS[STATE.user.plan]?.name || 'Premium';
+            badge.textContent = `✨ ${planName}`;
+            badge.classList.add('premium');
+        } else {
+            badge.textContent = '🔒 Free Tier';
+            badge.classList.remove('premium');
+        }
+    }
+
+    // [data-premium-gate] 자동 잠금/해제
+    document.querySelectorAll('[data-premium-gate]').forEach(el => {
+        if (isPremium()) {
+            el.classList.remove('locked');
+            el.classList.add('unlocked');
+        } else {
+            el.classList.add('locked');
+            el.classList.remove('unlocked');
+        }
+    });
+
+    // pro-unlock 박스 표시 제어
+    const proBox = document.getElementById('pro-unlock');
+    if (proBox) proBox.style.display = isPremium() ? 'none' : '';
+}
+
+function onUserStatusClick() {
+    if (isPremium()) {
+        const expires = new Date(STATE.user.expiresAt).toLocaleDateString();
+        if (confirm(`Premium active until ${expires}\n\nRevoke for testing?`)) {
+            lockPremium();
+        }
+    } else {
+        showPaywall('Unlock your full reading');
+    }
+}
+
+// ── 초기화 ──
+window.addEventListener('DOMContentLoaded', () => {
+    restoreUserState();
+    checkPaymentOnReturn();
+});
+// ══════════════════════════════════════════════════════════════════
+// END Step 1 Payment Infrastructure
+// ══════════════════════════════════════════════════════════════════
+
+// ── Starfield ──
+(function initStars() {
+    const bg = document.getElementById('stars-bg');
+    for (let i = 0; i < 60; i++) {
+        const s = document.createElement('div');
+        s.className = 'star';
+        const size = Math.random() * 2.5 + 0.8;
+        s.style.cssText = `
+            width:${size}px; height:${size}px;
+            left:${Math.random()*100}%;
+            top:${Math.random()*100}%;
+            --dur:${Math.random()*3+2}s;
+            animation-delay:${Math.random()*4}s;
+        `;
+        bg.appendChild(s);
+    }
+})();
+
+// ── Draw 3 cards ──
+function drawCards() {
+    const shuffled = [...TAROT_CARDS_78].sort(() => Math.random() - 0.5);
+    const drawn    = shuffled.slice(0, 3);
+    const reversed = drawn.map(() => Math.random() < 0.3);
+    return { drawn, reversed };
+}
+
+// ── Domain select ──
+function selectDomain(domain) {
+    CURRENT_DOMAIN = domain;
+    const inputArea = document.getElementById('input-area');
+    const badge     = document.getElementById('domain-badge');
+
+    const badges = {
+        love:     ['badge-love',     '❤️ Relationship Reading'],
+        fortune:  ['badge-fortune',  '🔮 Fortune Reading'],
+        decision: ['badge-decision', '⚖️ Decision Reading'],
+        stock:    ['badge-stock',    '🌱 Inner Abundance Reading'],
+    };
+
+    badge.className = 'input-domain-badge ' + (badges[domain]?.[0] || 'badge-fortune');
+    badge.textContent = badges[domain]?.[1] || '🔮 Fortune Reading';
+
+    const placeholders = {
+        love:     "e.g. 'What does he feel about me?' or 'Will our relationship work?'",
+        fortune:  "e.g. 'What energy is coming for me this month?'",
+        decision: "e.g. 'Should I take this job opportunity?'",
+        stock:    "e.g. 'What is my relationship with abundance and self-worth right now?'",
+    };
+    document.getElementById('question-input').placeholder = placeholders[domain] || placeholders.fortune;
+    document.getElementById('question-input').value = '';
+    document.getElementById('char-count').textContent = '0';
+
+    inputArea.style.display = 'block';
+    inputArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function updateCharCount() {
+    const v = document.getElementById('question-input').value;
+    document.getElementById('char-count').textContent = v.length;
+}
+
+// ── Start reading ──
+async function startReading() {
+    const q = document.getElementById('question-input').value.trim();
+    if (!q) { document.getElementById('question-input').focus(); return; }
+
+    const { drawn, reversed } = drawCards();
+    CURRENT_DRAWN_CARDS = drawn;
+    CURRENT_REVERSED    = reversed;
+    SERVER_METRICS      = null;
+
+    showResultScreen(q, drawn, reversed);
+    await streamReading(q, drawn, reversed);
+}
+
+function showResultScreen(q, drawn, reversed) {
+    document.getElementById('home-screen').style.display   = 'none';
+    document.getElementById('result-screen').style.display = 'block';
+    window.scrollTo(0, 0);
+
+    // domain badge
+    const domainBadges = {
+        love:     ['badge-love',     '❤️ Relationship'],
+        fortune:  ['badge-fortune',  '🔮 Fortune'],
+        decision: ['badge-decision', '⚖️ Decision'],
+        stock:    ['badge-stock',    '🌱 Inner Abundance'],
+    };
+    const rb = document.getElementById('result-domain-badge');
+    rb.className = 'result-domain-badge ' + (domainBadges[CURRENT_DOMAIN]?.[0] || 'badge-fortune');
+    rb.textContent = domainBadges[CURRENT_DOMAIN]?.[1] || '🔮 Fortune';
+
+    // cards row
+    const row = document.getElementById('cards-row');
+    row.innerHTML = drawn.map((c, i) => `
+        <div class="card-item">
+            <div class="card-label">${['Past','Present','Future'][i]}</div>
+            <div class="card-name">${c}</div>
+            ${reversed[i] ? '<div class="card-rev">↓ Reversed</div>' : ''}
+        </div>
+    `).join('');
+
+    // reset
+    document.getElementById('stream-content').innerHTML =
+        '<div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
+    document.getElementById('metrics-box').style.display    = 'none';
+    document.getElementById('metrics-box').innerHTML        = '';
+    document.getElementById('decision-layers').style.display = 'none';
+    document.getElementById('decision-layers').innerHTML    = '';
+    document.getElementById('pro-unlock').style.display     = 'none';
+}
+
+// ── Stream reading ──
+async function streamReading(question, drawn, reversed) {
+    const cardsStr   = drawn.join(',');
+    const reversedStr = reversed.map(r => r.toString()).join(',');
+
+    try {
+        const res = await fetch(`${WORKER_URL}/oracle`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                prompt:   question,
+                cards:    cardsStr,
+                reversed: reversedStr,
+                paid:     isPremium(),
+                token:    STATE.user.sessionToken || null,
+                domain:   CURRENT_DOMAIN,
+            })
+        });
+
+        if (!res.ok) throw new Error(`Server error ${res.status}`);
+
+        const reader  = res.body.getReader();
+        const decoder = new TextDecoder();
+        let   buffer  = '';
+        let   fullText = '';
+        let   metricsReceived = false;
+
+        const contentEl = document.getElementById('stream-content');
+        contentEl.innerHTML = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                const raw = line.slice(6).trim();
+                if (raw === '[DONE]') continue;
+                try {
+                    const parsed = JSON.parse(raw);
+
+                    if (parsed._type === 'metrics') {
+                        SERVER_METRICS = parsed.data;
+                        metricsReceived = true;
+                        if (window.location.search.includes('debug=1')) {
+                            console.table(parsed.data);
+                        }
+                    } else if (parsed._type === 'token') {
+                        fullText += parsed.text;
+                        contentEl.innerHTML = renderStreamText(fullText);
+                    } else if (parsed._type === 'done') {
+                        onStreamComplete(fullText);
+                    }
+                } catch {}
+            }
+        }
+
+        if (!metricsReceived) onStreamComplete(fullText);
+
+    } catch (e) {
+        document.getElementById('stream-content').innerHTML =
+            `<div style="color:rgba(231,76,60,0.9);padding:20px;text-align:center;">
+                <div style="font-size:1.2rem;margin-bottom:8px;">⚠️</div>
+                <div>Connection error. Please try again.</div>
+                <button onclick="goHome()" style="margin-top:14px;padding:8px 20px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:8px;cursor:pointer;">Back</button>
+            </div>`;
+    }
+}
+
+// ── Render stream text ──
+function renderStreamText(text) {
+    const sectionColors = {
+        'Past':            '#F39C12',
+        'Present':         '#3498DB',
+        'Future':          '#9B59B6',
+        'ZEUS Final Oracle': '#D4AF37',
+    };
+    let html = text;
+    // Replace section headers
+    Object.entries(sectionColors).forEach(([label, color]) => {
+        const re = new RegExp(`(^|\\n)(${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})\\n`, 'g');
+        html = html.replace(re, `$1<span class="section-label" style="color:${color}">✦ ${label}</span>\n`);
+    });
+    html = html.replace(/\n/g, '<br>');
+    return html;
+}
+
+// ── On stream complete ──
+function onStreamComplete(fullText) {
+    // Metrics box
+    if (SERVER_METRICS) {
+        const mHtml = renderMetricsEN(SERVER_METRICS);
+        if (mHtml) {
+            const mb = document.getElementById('metrics-box');
+            mb.innerHTML = mHtml;
+            mb.style.display = '';
+        }
+    }
+
+    // Decision layers (premium only)
+    if (isPremium() && SERVER_METRICS?.layers) {
+        renderDecisionLayersEN(SERVER_METRICS.layers);
+        const proBox = document.getElementById('pro-unlock');
+        if (proBox) proBox.style.display = 'none';
+    } else {
+        const proBox = document.getElementById('pro-unlock');
+        if (proBox) proBox.style.display = '';
+    }
+}
+
+// ── Render metrics ──
+function renderMetricsEN(m) {
+    if (!m) return '';
+    const items = [];
+    if (m.volatilityScore      !== undefined) items.push({ icon:'📊', label:'Volatility',   val: m.volatilityScore + '%' });
+    if (m.riskScore            !== undefined) items.push({ icon:'⚠️', label:'Risk',         val: m.riskScore + '%' });
+    if (m.opportunityWindow    !== undefined) items.push({ icon:'🎯', label:'Opportunity',  val: m.opportunityWindow + '%' });
+    if (m.actionType)                         items.push({ icon:'🧭', label:'Action',       val: { wait:'⏸ Wait', move:'🚀 Move', observe:'👁 Observe' }[m.actionType] || m.actionType });
+    if (m.attractionScore      !== undefined) items.push({ icon:'💘', label:'Attraction',   val: m.attractionScore + '%' });
+    if (m.conflictIndex        !== undefined) items.push({ icon:'⚔️', label:'Conflict',     val: m.conflictIndex + '%' });
+    if (m.dealConfidence       !== undefined) items.push({ icon:'🏠', label:'Deal Prob.',   val: m.dealConfidence + '%' });
+    if (m.entryTiming)                        items.push({ icon:'⏱', label:'Entry',        val: { NOW:'✅ Now', LATER:'⏳ Later', AVOID:'❌ Avoid' }[m.entryTiming] || m.entryTiming });
+
+    if (!items.length) return '';
+    return `<div class="metrics-box">${items.map(it => `
+        <div class="metric-item">
+            <span class="metric-icon">${it.icon}</span>
+            <div>
+                <div class="metric-label">${it.label}</div>
+                <div class="metric-value">${it.val}</div>
+            </div>
+        </div>`).join('')}</div>`;
+}
+
+// ── Render decision layers (paid) ──
+function renderDecisionLayersEN(layers) {
+    const el = document.getElementById('decision-layers');
+    if (!layers?.decision) return;
+    const d = layers.decision;
+    const e = layers.execution || {};
+    const t = layers.timing;
+
+    const blockLevelColors = {
+        HARD:   'rgba(231,76,60,0.8)',
+        MEDIUM: 'rgba(230,126,34,0.8)',
+        SOFT:   'rgba(52,152,219,0.8)',
+        BOTTOM: 'rgba(155,89,182,0.8)',
+    };
+    const blColor = blockLevelColors[d.blockLevel] || 'var(--gold)';
+
+    let html = '';
+
+    // Position
+    html += `<div class="layer-box" style="border-left-color:${blColor}">
+        <div class="layer-title">📍 Position</div>
+        <div class="layer-value">${d.position || '-'}</div>
+        ${d.strategy ? `<div class="layer-content" style="margin-top:6px;">${d.strategy}</div>` : ''}
+    </div>`;
+
+    // Execution
+    if (e.weight) {
+        html += `<div class="layer-box">
+            <div class="layer-title">⚡ Execution</div>
+            <div class="layer-content">
+                <div>📊 Weight: <strong>${e.weight}</strong></div>
+                <div>🛑 Stop Loss: <strong>${e.stopLoss || '-'}</strong></div>
+                <div>🎯 Target: <strong>${e.target || '-'}</strong></div>
+            </div>
+        </div>`;
+    }
+
+    // Timing
+    if (t && t !== null) {
+        const entries = (t.entryRanges || []).map(r => `<div>📈 ${r}</div>`).join('');
+        const watches = (t.watchRanges || []).map(r => `<div>⚠️ ${r}</div>`).join('');
+        if (entries || watches) {
+            html += `<div class="layer-box">
+                <div class="layer-title">⏱ Timing</div>
+                <div class="layer-content">${entries}${watches}</div>
+            </div>`;
+        }
+    }
+
+    // Entry triggers
+    const triggers = d.entryTriggers || [];
+    if (triggers.length) {
+        html += `<div class="layer-box">
+            <div class="layer-title">🔑 Entry Triggers</div>
+            <div class="layer-content">
+                ${triggers.map(tr => `<div>[${tr.stage}] ${tr.action}</div>`).join('')}
+            </div>
+        </div>`;
+    }
+
+    el.innerHTML = html;
+    el.style.display = '';
+}
+
+function goHome() {
+    document.getElementById('result-screen').style.display = 'none';
+    document.getElementById('home-screen').style.display  = 'flex';
+    window.scrollTo(0, 0);
+}
+
+// [Step 1] showPayModal — 기존 인터페이스 유지하면서 새 paywall 호출
+function showPayModal() {
+    showPaywall('Unlock your complete 5-layer reading');
+}
+</script>
+
+</body>
+</html>
