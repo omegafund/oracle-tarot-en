@@ -1420,17 +1420,14 @@ function renderDecisionLayersEN(layers) {
         </div>`;
     }
 
-    // Signal layer (Past / Current / Future + verdict)
+    // Signal layer (summary + verdict only — past/current/future already in Card Narrative above)
     const sig = layers.signal;
-    if (sig && (sig.past || sig.current || sig.future || sig.summary || sig.verdict)) {
+    if (sig && (sig.summary || sig.verdict)) {
         html += `<div class="layer-box">
             <div class="layer-title">📡 Signal</div>
             <div class="layer-content">
-                ${sig.past    ? `<div>⬅️ <strong>Past:</strong> ${sig.past}</div>` : ''}
-                ${sig.current ? `<div>⏺️ <strong>Present:</strong> ${sig.current}</div>` : ''}
-                ${sig.future  ? `<div>➡️ <strong>Future:</strong> ${sig.future}</div>` : ''}
-                ${sig.summary ? `<div style="margin-top:6px;opacity:0.9;">${sig.summary}</div>` : ''}
-                ${sig.verdict ? `<div style="margin-top:4px;"><em>Verdict: ${sig.verdict}</em></div>` : ''}
+                ${sig.summary ? `<div>${sig.summary}</div>` : ''}
+                ${sig.verdict ? `<div style="margin-top:6px;"><em>Verdict: ${sig.verdict}</em></div>` : ''}
             </div>
         </div>`;
     }
