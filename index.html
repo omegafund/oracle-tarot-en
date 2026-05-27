@@ -59,6 +59,8 @@
             position: absolute; border-radius: 50%;
             background: rgba(212,175,55,0.6);
             animation: twinkle var(--dur, 3s) ease-in-out infinite;
+            will-change: opacity;
+            transform: translateZ(0);
         }
         @keyframes twinkle {
             0%,100% { opacity: 0.2; transform: scale(1); }
@@ -125,12 +127,13 @@
             background: linear-gradient(135deg,
                 rgba(232,67,147,0.18) 0%,
                 rgba(155,89,182,0.12) 100%);
-            border: 1.5px solid rgba(232,67,147,0.45);
+            border: 2.5px solid rgba(232,67,147,0.85);
             border-radius: 18px;
             padding: 26px 24px;
             margin-bottom: 14px;
             transition: all 0.28s ease;
             position: relative; overflow: hidden;
+            box-shadow: 0 0 16px rgba(232,67,147,0.28), 0 0 1px rgba(232,67,147,0.6) inset;
         }
         .main-category-card::before {
             content: ''; position: absolute;
@@ -173,16 +176,19 @@
             transition: all 0.25s ease; position: relative; overflow: hidden;
         }
         .sub-card.fortune  {
-            background: rgba(155,89,182,0.12);
-            border: 1.5px solid rgba(155,89,182,0.38);
+            background: rgba(155,89,182,0.14);
+            border: 2px solid rgba(155,89,182,0.75);
+            box-shadow: 0 0 12px rgba(155,89,182,0.22);
         }
         .sub-card.decision {
-            background: rgba(212,175,55,0.10);
-            border: 1.5px solid rgba(212,175,55,0.35);
+            background: rgba(212,175,55,0.12);
+            border: 2px solid rgba(212,175,55,0.75);
+            box-shadow: 0 0 12px rgba(212,175,55,0.20);
         }
         .sub-card.stock    {
-            background: rgba(39,174,96,0.10);
-            border: 1.5px solid rgba(39,174,96,0.35);
+            background: rgba(39,174,96,0.12);
+            border: 2px solid rgba(39,174,96,0.78);
+            box-shadow: 0 0 12px rgba(39,174,96,0.22);
         }
         .sub-card:hover, .sub-card:active { transform: translateY(-2px); }
         .sub-card.fortune:hover  { box-shadow: 0 6px 20px rgba(155,89,182,0.25); }
@@ -478,8 +484,7 @@
         .user-status {
             position: fixed; top: 12px; right: 12px;
             z-index: 100;
-            background: rgba(0,0,0,0.6);
-            backdrop-filter: blur(6px);
+            background: rgba(10,10,20,0.85);
             border: 1px solid rgba(212,175,55,0.3);
             border-radius: 20px;
             padding: 5px 12px;
@@ -1048,7 +1053,7 @@ window.addEventListener('DOMContentLoaded', () => {
 // ── Starfield ──
 (function initStars() {
     const bg = document.getElementById('stars-bg');
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 30; i++) {
         const s = document.createElement('div');
         s.className = 'star';
         const size = Math.random() * 2.5 + 0.8;
