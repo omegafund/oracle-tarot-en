@@ -1089,18 +1089,18 @@ const STATE = {
 const PAYMENT_PLANS = {
     trial: {
         id:              'trial',
-        name:            'Trial Reading',
-        desc:            'Single full reading · 1 hour access',
+        name:            'Trial',
+        desc:            '3 deep readings · 24 hours',
         price_cents:     99,                                // $0.99
         currency:        'USD',
-        duration_ms:     60 * 60 * 1000,                    // 1 hour
+        duration_ms:     24 * 60 * 60 * 1000,               // 24 hours
         stripe_price_id: 'price_TODO_TRIAL',                // ← Stripe 가입 후 채움
     },
     monthly: {
         id:              'monthly',
         name:            'Monthly',
-        desc:            'Unlimited readings · billed monthly',
-        price_cents:     999,                               // $9.99
+        desc:            '1 deep reading/day + 10 quick draws/day',
+        price_cents:     799,                               // $7.99
         currency:        'USD',
         duration_ms:     30 * 24 * 60 * 60 * 1000,
         stripe_price_id: 'price_TODO_MONTHLY',
@@ -1108,21 +1108,12 @@ const PAYMENT_PLANS = {
     yearly: {
         id:              'yearly',
         name:            'Yearly',
-        desc:            'Save 33% · 12 months unlimited',
-        price_cents:     7900,                              // $79.00
+        desc:            'Save 38% · 1 deep reading/day all year',
+        price_cents:     5900,                              // $59.00
         currency:        'USD',
         duration_ms:     365 * 24 * 60 * 60 * 1000,
         stripe_price_id: 'price_TODO_YEARLY',
         featured:        true,
-    },
-    lifetime: {
-        id:              'lifetime',
-        name:            'Lifetime Access',
-        desc:            'Pay once · forever access',
-        price_cents:     19900,                             // $199.00
-        currency:        'USD',
-        duration_ms:     100 * 365 * 24 * 60 * 60 * 1000,   // 100 years (effectively forever)
-        stripe_price_id: 'price_TODO_LIFETIME',
     },
 };
 
@@ -1530,6 +1521,7 @@ function showResultScreen(q, drawn, reversed) {
     window._aiGuidance = null;
     window._aiCautions = null;
     window._aiClosing = null;
+    window._dependencyNote = null;
     SERVER_METRICS = null;
     document.getElementById('stream-content').innerHTML =
         '<div class="oracle-loading">' +
@@ -1621,7 +1613,28 @@ async function streamReading(question, drawn, reversed) {
                 try {
                     const parsed = JSON.parse(raw);
 
-                    if (parsed._type === 'metrics') {
+                    if (parsed._type === 'crisis') {
+                        // Layer 3: crisis signal — show help resources, no reading.
+                        if (window._oracleRotator) { clearInterval(window._oracleRotator); window._oracleRotator = null; }
+                        contentEl.innerHTML = `<div style="padding:24px;text-align:center;line-height:1.7;color:#F1C40F;">
+                            <div style="font-size:1.6rem;margin-bottom:14px;">🕊️</div>
+                            <div style="font-size:1.05rem;color:#fff;">${parsed.message}</div>
+                        </div>`;
+                        metricsReceived = true;  // suppress metrics/teaser
+                        continue;
+                    } else if (parsed._type === 'cooldown') {
+                        // Layer 1: daily deep limit reached — gentle cooldown.
+                        if (window._oracleRotator) { clearInterval(window._oracleRotator); window._oracleRotator = null; }
+                        contentEl.innerHTML = `<div style="padding:24px;text-align:center;line-height:1.7;">
+                            <div style="font-size:1.5rem;margin-bottom:12px;">🌙</div>
+                            <div style="font-size:1.02rem;color:#F1C40F;">${parsed.message}</div>
+                        </div>`;
+                        metricsReceived = true;
+                        continue;
+                    } else if (parsed._type === 'dependency_note') {
+                        // Layer 2: gentle dependency nudge — stash to append after reading.
+                        window._dependencyNote = parsed.text;
+                    } else if (parsed._type === 'metrics') {
                         SERVER_METRICS = parsed.data;
                         metricsReceived = true;
                         if (window.location.search.includes('debug=1')) {
@@ -1719,6 +1732,13 @@ function renderStreamText(text) {
 
 // ── On stream complete ──
 function onStreamComplete(fullText) {
+    // Layer 2: gentle dependency note appended below the reading (non-blocking).
+    if (window._dependencyNote) {
+        const contentEl = document.getElementById('stream-content');
+        if (contentEl) {
+            contentEl.innerHTML += `<div style="margin-top:18px;padding:14px 16px;border-left:3px solid rgba(241,196,15,0.5);background:rgba(241,196,15,0.06);border-radius:6px;font-style:italic;color:rgba(241,196,15,0.9);line-height:1.6;">${window._dependencyNote}</div>`;
+        }
+    }
     // Metrics box
     if (SERVER_METRICS) {
         const mHtml = renderMetricsEN(SERVER_METRICS);
