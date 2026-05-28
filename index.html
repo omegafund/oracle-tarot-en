@@ -1480,10 +1480,12 @@ const COMFORT_SVGS = [
   `<svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block;"><defs><linearGradient id="sproutBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2a3326"/><stop offset="100%" stop-color="#3e4d34"/></linearGradient></defs><rect width="200" height="300" fill="url(#sproutBg)"/><path d="M100 230 Q100 170 100 140" stroke="#9ccc8f" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M100 175 Q70 160 58 178 Q78 196 100 178 Z" fill="#8fbf7f" opacity="0.95"/><path d="M100 160 Q130 144 144 162 Q122 182 100 164 Z" fill="#a6d49a" opacity="0.95"/><circle cx="100" cy="138" r="5" fill="#cfe8b0"/><ellipse cx="100" cy="232" rx="46" ry="7" fill="#000" opacity="0.18"/></svg>`
 ];
 function pickComfortSVG() { return COMFORT_SVGS[Math.floor(Math.random() * COMFORT_SVGS.length)]; }
+// Show all three comfort images side by side, filling the 3-card layout so the
+// crisis screen keeps the familiar, balanced three-slot composition.
 function renderComfortSlot() {
-  return `<div class="card-item" style="max-width:130px; margin:0 auto;">
-    <div class="card-img-wrap" style="border-color: rgba(241,196,15,0.4);">${pickComfortSVG()}</div>
-  </div>`;
+  return COMFORT_SVGS.map(svg => `<div class="card-item">
+    <div class="card-img-wrap" style="border-color: rgba(241,196,15,0.4);">${svg}</div>
+  </div>`).join('');
 }
 
 // Client-side crisis pre-check — mirrors the worker's detection so we can show
