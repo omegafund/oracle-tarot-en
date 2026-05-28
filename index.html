@@ -1530,6 +1530,7 @@ function showResultScreen(q, drawn, reversed) {
     window._aiGuidance = null;
     window._aiCautions = null;
     window._aiClosing = null;
+    SERVER_METRICS = null;
     document.getElementById('stream-content').innerHTML =
         '<div class="oracle-loading">' +
           '<div class="oracle-loading-msg" id="oracle-loading-msg">⚡ The Oracle of Zeus unfolds...</div>' +
@@ -1783,7 +1784,11 @@ function renderMetricsEN(m) {
 // ── Render decision layers (paid) ──
 function renderDecisionLayersEN(layers) {
     const el = document.getElementById('decision-layers');
-    if (!layers?.decision) return;
+    if (!el) return;
+    // Always clear first — prevents a previous reading's layers from persisting
+    // when this reading takes an early-return path (the reading-merge bug).
+    el.innerHTML = '';
+    if (!layers?.decision) { el.style.display = 'none'; return; }
     const d = layers.decision;
     const e = layers.execution || {};
     const t = layers.timing;
