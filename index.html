@@ -1470,9 +1470,82 @@ function updateCharCount() {
 }
 
 // ── Start reading ──
+// ── COMFORT IMAGERY (crisis screen) ──────────────────────────────
+// Three calming SVGs shown in the existing card slot when a crisis is detected.
+// NOT tarot cards — outside the 78-card deck, never drawn. They reuse the card-slot
+// layout (aspect 2/3) so no new layout is needed. Light after dark, still water, growth.
+const COMFORT_SVGS = [
+  `<svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block;"><defs><linearGradient id="dawnSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1a1a2e"/><stop offset="55%" stop-color="#5b4a6b"/><stop offset="80%" stop-color="#d98c6a"/><stop offset="100%" stop-color="#f1c40f"/></linearGradient><radialGradient id="dawnSun" cx="50%" cy="100%" r="60%"><stop offset="0%" stop-color="#fff3c4"/><stop offset="100%" stop-color="#f1c40f" stop-opacity="0"/></radialGradient></defs><rect width="200" height="300" fill="url(#dawnSky)"/><ellipse cx="100" cy="300" rx="120" ry="120" fill="url(#dawnSun)"/><circle cx="100" cy="270" r="34" fill="#fff7da" opacity="0.95"/><g fill="#fff" opacity="0.5"><circle cx="40" cy="50" r="1.2"/><circle cx="150" cy="40" r="1"/><circle cx="170" cy="80" r="1.3"/><circle cx="30" cy="110" r="1"/><circle cx="120" cy="70" r="0.9"/></g></svg>`,
+  `<svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block;"><defs><linearGradient id="waterBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#23304a"/><stop offset="100%" stop-color="#3a5a78"/></linearGradient></defs><rect width="200" height="300" fill="url(#waterBg)"/><circle cx="100" cy="150" r="6" fill="none" stroke="#cfe8f0" stroke-width="1.5" opacity="0.9"/><circle cx="100" cy="150" r="26" fill="none" stroke="#cfe8f0" stroke-width="1.2" opacity="0.6"/><circle cx="100" cy="150" r="50" fill="none" stroke="#cfe8f0" stroke-width="1" opacity="0.4"/><circle cx="100" cy="150" r="76" fill="none" stroke="#cfe8f0" stroke-width="0.8" opacity="0.22"/><circle cx="100" cy="150" r="104" fill="none" stroke="#cfe8f0" stroke-width="0.6" opacity="0.12"/></svg>`,
+  `<svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block;"><defs><linearGradient id="sproutBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2a3326"/><stop offset="100%" stop-color="#3e4d34"/></linearGradient></defs><rect width="200" height="300" fill="url(#sproutBg)"/><path d="M100 230 Q100 170 100 140" stroke="#9ccc8f" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M100 175 Q70 160 58 178 Q78 196 100 178 Z" fill="#8fbf7f" opacity="0.95"/><path d="M100 160 Q130 144 144 162 Q122 182 100 164 Z" fill="#a6d49a" opacity="0.95"/><circle cx="100" cy="138" r="5" fill="#cfe8b0"/><ellipse cx="100" cy="232" rx="46" ry="7" fill="#000" opacity="0.18"/></svg>`
+];
+function pickComfortSVG() { return COMFORT_SVGS[Math.floor(Math.random() * COMFORT_SVGS.length)]; }
+function renderComfortSlot() {
+  return `<div class="card-item" style="max-width:130px; margin:0 auto;">
+    <div class="card-img-wrap" style="border-color: rgba(241,196,15,0.4);">${pickComfortSVG()}</div>
+  </div>`;
+}
+
+// Client-side crisis pre-check — mirrors the worker's detection so we can show
+// the supportive screen WITHOUT ever drawing or flashing tarot cards. A vulnerable
+// person should not see card images/names (e.g. Judgement, The Tower) at all.
+const CLIENT_CRISIS_SIGNALS = [
+    'kill myself','killing myself','end my life','end it all','want to die','wanna die',
+    'no reason to live','better off dead','suicide','suicidal','self harm','self-harm',
+    'hurt myself','harming myself',"can't go on",'cannot go on','no point living',
+    "don't want to be here anymore",'take my own life','ending things'
+];
+const CLIENT_CRISIS_MESSAGE = "Some things weigh more than a card reading can hold — and that's okay. If something heavy is sitting with you right now, please don't carry it alone. Talking to someone you trust, or just a real person who's there to listen, can steady things more than any reading can. In the US, 988 connects you with someone to talk to, anytime. Be gentle with yourself.";
+function clientDetectCrisis(prompt) {
+    const p = String(prompt || '').toLowerCase();
+    if (/dying to (know|see|hear|find out|meet)/.test(p)) {
+        return CLIENT_CRISIS_SIGNALS.some(s => s !== 'want to die' && p.includes(s));
+    }
+    return CLIENT_CRISIS_SIGNALS.some(s => p.includes(s));
+}
+function showCrisisScreen(message) {
+    document.getElementById('home-screen').style.display   = 'none';
+    document.getElementById('result-screen').style.display = 'block';
+    window.scrollTo(0, 0);
+    // Hide reading meta — badge, PRO box, metrics, layers. Keep cards-row but
+    // fill it with a calming comfort image (reused layout, deck untouched).
+    ['result-domain-badge','pro-unlock','metrics-box','decision-layers'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+    const row = document.getElementById('cards-row');
+    if (row) { row.style.display = ''; row.innerHTML = renderComfortSlot(); }
+    const contentEl = document.getElementById('stream-content');
+    if (contentEl) contentEl.innerHTML = renderCrisisHTML(message);
+}
+
+// Warm, full crisis screen — soft and held, not a bare empty box. No cards.
+function renderCrisisHTML(message) {
+    return `<div style="
+        max-width:560px;margin:8px auto;padding:40px 28px;
+        text-align:center;line-height:1.9;
+        background:radial-gradient(ellipse at top, rgba(241,196,15,0.08), rgba(20,20,30,0.0) 70%);
+        border-radius:18px;">
+        <div style="font-size:2.4rem;margin-bottom:8px;opacity:0.9;">🕊️</div>
+        <div style="width:48px;height:2px;margin:18px auto 24px;
+             background:linear-gradient(90deg, transparent, rgba(241,196,15,0.5), transparent);"></div>
+        <div style="font-size:1.12rem;color:#fff;font-weight:300;letter-spacing:0.2px;">${message}</div>
+        <div style="margin-top:28px;font-size:0.92rem;color:rgba(255,255,255,0.45);font-style:italic;">
+            Take all the time you need.
+        </div>
+    </div>`;
+}
+
 async function startReading() {
     const q = document.getElementById('question-input').value.trim();
     if (!q) { document.getElementById('question-input').focus(); return; }
+
+    // SAFETY: crisis pre-check BEFORE drawing any cards. If detected, show the
+    // supportive screen and stop — no cards are ever drawn or shown.
+    if (clientDetectCrisis(q)) {
+        showCrisisScreen(CLIENT_CRISIS_MESSAGE);
+        return;
+    }
 
     const { drawn, reversed } = drawCards();
     CURRENT_DRAWN_CARDS = drawn;
@@ -1487,6 +1560,12 @@ function showResultScreen(q, drawn, reversed) {
     document.getElementById('home-screen').style.display   = 'none';
     document.getElementById('result-screen').style.display = 'block';
     window.scrollTo(0, 0);
+
+    // Restore any elements a prior crisis screen may have hidden.
+    ['cards-row','result-domain-badge'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = '';
+    });
 
     // domain badge
     const domainBadges = {
@@ -1614,12 +1693,27 @@ async function streamReading(question, drawn, reversed) {
                     const parsed = JSON.parse(raw);
 
                     if (parsed._type === 'crisis') {
-                        // Layer 3: crisis signal — show help resources, no reading.
+                        // Layer 3: crisis signal — show ONLY the supportive message.
+                        // Critically: hide the drawn cards too. A vulnerable person can
+                        // read meaning into the card images/names themselves (e.g. Judgement,
+                        // The Emperor) even when the text reading is withheld. Remove all of it.
                         if (window._oracleRotator) { clearInterval(window._oracleRotator); window._oracleRotator = null; }
-                        contentEl.innerHTML = `<div style="padding:24px;text-align:center;line-height:1.7;color:#F1C40F;">
-                            <div style="font-size:1.6rem;margin-bottom:14px;">🕊️</div>
-                            <div style="font-size:1.05rem;color:#fff;">${parsed.message}</div>
-                        </div>`;
+                        // replace drawn cards with a calming comfort image (reused slot)
+                        const _cardsRow = document.getElementById('cards-row');
+                        if (_cardsRow) { _cardsRow.style.display = ''; _cardsRow.innerHTML = renderComfortSlot(); }
+                        // hide domain badge
+                        const _badge = document.getElementById('result-domain-badge');
+                        if (_badge) _badge.style.display = 'none';
+                        // hide PRO unlock / payment prompts
+                        const _pro = document.getElementById('pro-unlock');
+                        if (_pro) _pro.style.display = 'none';
+                        // hide metrics + decision layers if present
+                        const _mb = document.getElementById('metrics-box');
+                        if (_mb) _mb.style.display = 'none';
+                        const _dl = document.getElementById('decision-layers');
+                        if (_dl) _dl.style.display = 'none';
+                        // show only the message — warm, full, no cards
+                        contentEl.innerHTML = renderCrisisHTML(parsed.message);
                         metricsReceived = true;  // suppress metrics/teaser
                         continue;
                     } else if (parsed._type === 'cooldown') {
