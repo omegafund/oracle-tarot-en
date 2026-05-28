@@ -1851,14 +1851,61 @@ function renderDecisionLayersEN(layers) {
         </div>`;
     }
 
-    // Signal layer (summary + verdict only — past/current/future already in Card Narrative above)
+    // Signal layer — with VERDICT AUTHORITY RULE applied.
+    // The narrative body's tone constrains the verdict — verdict cannot say
+    // "warming/opening" if the body talks about stagnation, suspension,
+    // unresolved patterns, or avoidance.
     const sig = layers.signal;
     if (sig && (sig.summary || sig.verdict)) {
+        // Detect narrative tone from the rendered oracle body + verdict candidate
+        const bodyText = (document.getElementById('stream-content')?.textContent || '').toLowerCase();
+        const stagnationCues = /\b(stagnat|suspension|suspended|stall|inaction|unresolved|deferral|delayed|defer|holding pattern|avoidance|withdrawn|withdraw|stuck|trapped|frozen|prolonged)\b/;
+        const griefCues = /\b(grief|grieving|mourning|loss|unfinished|incomplete|lingering|cannot let go|cant let go|haunting|never settled)\b/;
+        const friction = /\b(conflict|tension|friction|argument|drain|drained|exhaust|fragment|crack|wound|wounded|painful|hurt|distrust)\b/;
+        const expansion = /\b(opening|warming|reopen|renewal|breakthrough|softening|fresh|new beginning|momentum|recover|repair|restoring)\b/;
+
+        let verdict = String(sig.verdict || '').trim();
+        const verdictLower = verdict.toLowerCase();
+
+        // Forbid optimistic verdicts when narrative is heavy
+        const heavyNarrative = stagnationCues.test(bodyText) || griefCues.test(bodyText) || friction.test(bodyText);
+        const optimisticVerdict = /(warming|opening|favorable|aligning|momentum)/.test(verdictLower);
+        const hasExpansionLanguage = expansion.test(bodyText);
+
+        if (verdict && optimisticVerdict && heavyNarrative && !hasExpansionLanguage) {
+            // Reclassify verdict to match the body
+            if (griefCues.test(bodyText)) {
+                verdict = 'cooling — emotionally unresolved';
+            } else if (stagnationCues.test(bodyText)) {
+                verdict = 'held — pattern not yet resolving';
+            } else {
+                verdict = 'cooling';
+            }
+        }
+
+        // Filter generic signal summary if it doesn't match the body tone
+        let summary = String(sig.summary || '').trim();
+        const summaryOptimistic = /(warming|opening|favorable|momentum|brightens)/.test(summary.toLowerCase());
+        if (summary && summaryOptimistic && heavyNarrative && !hasExpansionLanguage) {
+            // Pick a tone-matching micro-signal from a small curated pool
+            // (this is the "curated micro-pool" approach from your guidance)
+            const SIGNAL_MICRO = {
+                grief: "Something here lingers because it never fully completed itself.",
+                stagnation: "The pattern keeps suspending its own resolution.",
+                friction: "The tension softens briefly but doesn't fully resolve.",
+                generic: "Something remains emotionally unfinished here."
+            };
+            summary = griefCues.test(bodyText) ? SIGNAL_MICRO.grief
+                    : stagnationCues.test(bodyText) ? SIGNAL_MICRO.stagnation
+                    : friction.test(bodyText) ? SIGNAL_MICRO.friction
+                    : SIGNAL_MICRO.generic;
+        }
+
         html += `<div class="layer-box">
             <div class="layer-title">📡 Signal</div>
             <div class="layer-content">
-                ${sig.summary ? `<div>${sig.summary}</div>` : ''}
-                ${sig.verdict ? `<div style="margin-top:6px;"><em>Verdict: ${sig.verdict}</em></div>` : ''}
+                ${summary ? `<div>${summary}</div>` : ''}
+                ${verdict ? `<div style="margin-top:6px;"><em>Verdict: ${verdict}</em></div>` : ''}
             </div>
         </div>`;
     }
@@ -1916,22 +1963,41 @@ function renderDecisionLayersEN(layers) {
         </div>`;
     }
 
-    // Critical Interpretation (deep card combo reading) — closing line is rotated
-    // from index pool 25% of the time to break worker's 50%+ closing repetition.
+    // Critical Interpretation — conditional display only.
+    // Human readers don't always end with a "deep philosophical closing."
+    // Show ONLY when: gravity is subtle/dominant, OR risk is high/elevated,
+    // OR the lens is grief (heavy emotional weight). Otherwise hide entirely.
     const ci = layers.criticalInterpretation;
-    if (ci && (ci.summary || ci.detail || (typeof ci === 'string' && ci.length))) {
+    const _gravTier = (SERVER_METRICS && SERVER_METRICS.gravityTier) || 'balanced';
+    const _riskLevel = (layers.risk && layers.risk.level) || '';
+    const _lensActive = (SERVER_METRICS && SERVER_METRICS.lens) || '';
+    const _showDeep = (_gravTier === 'subtle' || _gravTier === 'dominant')
+                   || (/high|elevated/i.test(_riskLevel))
+                   || (_lensActive === 'grief');
+
+    if (_showDeep && ci && (ci.summary || ci.detail || (typeof ci === 'string' && ci.length))) {
         let text = typeof ci === 'string' ? ci : (ci.detail || ci.summary || '');
         if (text) {
-            // Compute a stable hash from the card combination for this reading
+            // Strip fate/destiny language from worker output (extra safety net beyond worker pool)
+            text = text
+                .replace(/^.*flow of fate.*$/gmi, '')
+                .replace(/^.*fate leans.*$/gmi, '')
+                .replace(/^.*aligned energy invites.*$/gmi, '')
+                .replace(/^.*bold step can create.*$/gmi, '')
+                .replace(/^.*invites good results.*$/gmi, '')
+                .replace(/\n{2,}/g, '\n')
+                .trim();
+
+            // Compute stable hash for closing rotation
             const cardsForHash = (SERVER_METRICS && SERVER_METRICS.cards) || (SERVER_METRICS && SERVER_METRICS.cleanCards) || [];
             const hashSrc = Array.isArray(cardsForHash) ? cardsForHash.join('|') : String(cardsForHash);
             let _ch = 0;
             for (let i = 0; i < hashSrc.length; i++) _ch = (_ch * 31 + hashSrc.charCodeAt(i)) >>> 0;
             window._currentReadingHash = _ch;
-            // Prefer AI lens-aware closing if it passes validation, then closing-pool rotation,
-            // then worker default.
-            const lines = text.split('\n');
-            if (lines.length >= 2) {
+
+            // Prefer AI lens-aware closing, then closing-pool rotation, then worker default
+            const lines = text.split('\n').filter(Boolean);
+            if (lines.length >= 1) {
                 const lastLine = lines[lines.length - 1].trim();
                 const _dom = (SERVER_METRICS && SERVER_METRICS.domain) || 'fortune';
                 let finalClosing = lastLine;
@@ -1949,13 +2015,17 @@ function renderDecisionLayersEN(layers) {
                 }
                 if (finalClosing !== lastLine) {
                     lines[lines.length - 1] = finalClosing;
-                    text = lines.join('\n');
                 }
             }
-            html += `<div class="layer-box" style="border-left-color: var(--gold);">
-                <div class="layer-title">🔍 Deep Interpretation</div>
-                <div class="layer-content" style="white-space: pre-wrap;">${text}</div>
-            </div>`;
+
+            // Cap at 2 lines max (was 3) — your guidance to compress
+            const finalText = lines.slice(-2).join('\n');
+            if (finalText) {
+                html += `<div class="layer-box" style="border-left-color: var(--gold);">
+                    <div class="layer-title">🔍 Deep Interpretation</div>
+                    <div class="layer-content" style="white-space: pre-wrap;">${finalText}</div>
+                </div>`;
+            }
         }
     }
 
