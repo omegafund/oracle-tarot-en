@@ -1742,19 +1742,43 @@ function onStreamComplete(fullText) {
     // Layer 2-Lite: persist lightweight state for next reading's continuity hint.
     // Strictly 5 fields, no narrative, no question text.
     try {
-        const verdict = (SERVER_METRICS && SERVER_METRICS.layers && SERVER_METRICS.layers.signal
+        const rawVerdict = (SERVER_METRICS && SERVER_METRICS.layers && SERVER_METRICS.layers.signal
                          && SERVER_METRICS.layers.signal.verdict) || null;
+        // Compress to one neutral word (mirrors the render-side compression) so the
+        // next reading's continuity hint carries a clean state word, not residue prose.
+        const verdict = (function(v){
+            const s = String(v||'').toLowerCase(); if(!s) return null;
+            if(/(fracturing|challenging|cooling|declining|heavy|fading)/.test(s)) return 'fading';
+            if(/(held|suspended|stuck|stagnant|not yet resolving|pause|frozen|limbo)/.test(s)) return 'suspended';
+            if(/(warming|opening|favorable|aligning|momentum|rising|growing|expansive)/.test(s)) return 'opening';
+            if(/(steady|balanced|stable|self-defining|grounded)/.test(s)) return 'steady';
+            return 'unsettled';
+        })(rawVerdict);
         const lastCard = (SERVER_METRICS && Array.isArray(SERVER_METRICS.cleanCards) && SERVER_METRICS.cleanCards[2])
                          || (SERVER_METRICS && Array.isArray(SERVER_METRICS.cards) && SERVER_METRICS.cards[2])
                          || null;
         const lens = (SERVER_METRICS && SERVER_METRICS.lens) || null;
         const domain = (SERVER_METRICS && SERVER_METRICS.domain) || CURRENT_DOMAIN || null;
+
+        // Lexical cooldown: capture which overused emotional abstractions this
+        // reading leaned on, so the next reading can be nudged to vary its phrasing.
+        // Discourage (not ban) — keeps language natural while breaking repetition.
+        const WATCH_WORDS = ['unfinished','unresolved','lingering','deeper','clarity',
+                             'grounding','release','stagnant','suspended','avoidance',
+                             'authentic','alignment','withdrawal','disconnection'];
+        let lexicalEchoes = [];
+        try {
+            const body = (document.getElementById('stream-content')?.textContent || '').toLowerCase();
+            lexicalEchoes = WATCH_WORDS.filter(w => body.includes(w)).slice(0, 5);
+        } catch (e) { /* ignore */ }
+
         if (domain) {
             localStorage.setItem('zeus_prev_reading', JSON.stringify({
                 lastDomain: domain,
                 lastLens: lens,
                 lastVerdict: verdict,
                 lastCard: lastCard,
+                lexicalEchoes: lexicalEchoes,
                 ts: Date.now()
             }));
         }
@@ -1876,13 +1900,13 @@ function renderDecisionLayersEN(layers) {
         const hasExpansionLanguage = expansion.test(bodyText);
 
         if (verdict && optimisticVerdict && heavyNarrative && !hasExpansionLanguage) {
-            // Reclassify verdict to match the body
+            // Reclassify to match the body — neutral, domain-agnostic state words
             if (griefCues.test(bodyText)) {
-                verdict = 'cooling — emotionally unresolved';
+                verdict = 'fading';
             } else if (stagnationCues.test(bodyText)) {
-                verdict = 'held — pattern not yet resolving';
+                verdict = 'suspended';
             } else {
-                verdict = 'cooling';
+                verdict = 'fading';
             }
         }
 
@@ -1890,6 +1914,22 @@ function renderDecisionLayersEN(layers) {
         // Per guidance: Signal's role is a short emotional-weather note, not a
         // relationship outcome judgment. We keep the verdict line (constrained by
         // Verdict Authority above) but reframe the summary toward resonance.
+        // VERDICT COMPRESSION → one neutral, domain-agnostic state word.
+        // A long verdict ("strongly challenging", "steady, self-defining energy")
+        // reads like an AI classification label and over-defines the whole reading.
+        // Map everything to a single state word that fits love/fortune/decision/stock.
+        function compressVerdict(v) {
+            const s = String(v || '').toLowerCase();
+            if (!s) return '';
+            if (/(fracturing|strongly challenging|challenging|cooling|declining|heavy|fading)/.test(s)) return 'fading';
+            if (/(held|suspended|stuck|stagnant|not yet resolving|pause|frozen|limbo)/.test(s)) return 'suspended';
+            if (/(warming|opening|favorable|aligning|momentum|rising|growing|expansive|gently opening)/.test(s)) return 'opening';
+            if (/(steady|balanced|stable|self-defining|grounded)/.test(s)) return 'steady';
+            if (/(uncertain|unsettled|finding direction|unclear|mixed)/.test(s)) return 'unsettled';
+            return 'unsettled';  // safe default
+        }
+        const verdictWord = compressVerdict(verdict);
+
         let summary = String(sig.summary || '').trim();
         const summaryOptimistic = /(warming|opening|favorable|momentum|brightens|tilts toward|rising tide)/.test(summary.toLowerCase());
 
@@ -1913,7 +1953,7 @@ function renderDecisionLayersEN(layers) {
             <div class="layer-title">📡 Signal</div>
             <div class="layer-content">
                 ${summary ? `<div>${summary}</div>` : ''}
-                ${verdict ? `<div style="margin-top:6px;"><em>Verdict: ${verdict}</em></div>` : ''}
+                ${verdictWord ? `<div style="margin-top:6px;"><em>Current: ${verdictWord}</em></div>` : ''}
             </div>
         </div>`;
     }
