@@ -1438,6 +1438,20 @@ async function streamReading(question, drawn, reversed) {
     const reversedStr = reversed.map(r => r.toString()).join(',');
 
     try {
+        // Layer 2-Lite: load previous reading context (lightweight state) from localStorage.
+        // 5 fields max: { lastDomain, lastLens, lastVerdict, lastCard, ts }
+        let _prevContext = null;
+        try {
+            const raw = localStorage.getItem('zeus_prev_reading');
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                // Discard if older than 7 days — continuity should fade, not haunt.
+                if (parsed && parsed.ts && (Date.now() - parsed.ts) < 7 * 24 * 60 * 60 * 1000) {
+                    _prevContext = parsed;
+                }
+            }
+        } catch (e) { /* ignore */ }
+
         const res = await fetch(`${WORKER_URL}/oracle`, {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1448,6 +1462,7 @@ async function streamReading(question, drawn, reversed) {
                 paid:     isPremium(),
                 token:    STATE.user.sessionToken || null,
                 domain:   CURRENT_DOMAIN,
+                prevContext: _prevContext,
             })
         });
 
@@ -1563,20 +1578,41 @@ function onStreamComplete(fullText) {
         const proBox = document.getElementById('pro-unlock');
         if (proBox) proBox.style.display = '';
     }
+
+    // Layer 2-Lite: persist lightweight state for next reading's continuity hint.
+    // Strictly 5 fields, no narrative, no question text.
+    try {
+        const verdict = (SERVER_METRICS && SERVER_METRICS.layers && SERVER_METRICS.layers.signal
+                         && SERVER_METRICS.layers.signal.verdict) || null;
+        const lastCard = (SERVER_METRICS && Array.isArray(SERVER_METRICS.cleanCards) && SERVER_METRICS.cleanCards[2])
+                         || (SERVER_METRICS && Array.isArray(SERVER_METRICS.cards) && SERVER_METRICS.cards[2])
+                         || null;
+        const lens = (SERVER_METRICS && SERVER_METRICS.lens) || null;
+        const domain = (SERVER_METRICS && SERVER_METRICS.domain) || CURRENT_DOMAIN || null;
+        if (domain) {
+            localStorage.setItem('zeus_prev_reading', JSON.stringify({
+                lastDomain: domain,
+                lastLens: lens,
+                lastVerdict: verdict,
+                lastCard: lastCard,
+                ts: Date.now()
+            }));
+        }
+    } catch (e) { /* localStorage may be unavailable in private mode */ }
 }
 
 // ── Render metrics ──
 function renderMetricsEN(m) {
     if (!m) return '';
     const items = [];
-    if (m.volatilityScore      !== undefined) items.push({ icon:'📊', label:'Volatility',   val: m.volatilityScore + '%' });
-    if (m.riskScore            !== undefined) items.push({ icon:'⚠️', label:'Risk',         val: m.riskScore + '%' });
-    if (m.opportunityWindow    !== undefined) items.push({ icon:'🎯', label:'Opportunity',  val: m.opportunityWindow + '%' });
-    if (m.actionType)                         items.push({ icon:'🧭', label:'Action',       val: { wait:'⏸ Wait', move:'🚀 Move', observe:'👁 Observe' }[m.actionType] || m.actionType });
-    if (m.attractionScore      !== undefined) items.push({ icon:'💘', label:'Attraction',   val: m.attractionScore + '%' });
-    if (m.conflictIndex        !== undefined) items.push({ icon:'⚔️', label:'Conflict',     val: m.conflictIndex + '%' });
-    if (m.dealConfidence       !== undefined) items.push({ icon:'🏠', label:'Deal Prob.',   val: m.dealConfidence + '%' });
-    if (m.entryTiming)                        items.push({ icon:'⏱', label:'Entry',        val: { NOW:'✅ Now', LATER:'⏳ Later', AVOID:'❌ Avoid' }[m.entryTiming] || m.entryTiming });
+    if (m.volatilityScore      !== undefined) items.push({ icon:'📊', label:'Emotional turbulence', val: m.volatilityScore + '%' });
+    if (m.riskScore            !== undefined) items.push({ icon:'⚠️', label:'Emotional strain',     val: m.riskScore + '%' });
+    if (m.opportunityWindow    !== undefined) items.push({ icon:'🎯', label:'Opening',              val: m.opportunityWindow + '%' });
+    if (m.actionType)                         items.push({ icon:'🧭', label:'Direction',            val: { wait:'⏸ Hold', move:'🚀 Move', observe:'👁 Observe' }[m.actionType] || m.actionType });
+    if (m.attractionScore      !== undefined) items.push({ icon:'💘', label:'Connection pull',      val: m.attractionScore + '%' });
+    if (m.conflictIndex        !== undefined) items.push({ icon:'⚔️', label:'Friction pattern',     val: m.conflictIndex + '%' });
+    if (m.dealConfidence       !== undefined) items.push({ icon:'🏠', label:'Path clarity',         val: m.dealConfidence + '%' });
+    if (m.entryTiming)                        items.push({ icon:'⏱', label:'Timing',               val: { NOW:'✅ Now', LATER:'⏳ Later', AVOID:'❌ Avoid' }[m.entryTiming] || m.entryTiming });
 
     if (!items.length) return '';
     return `<div class="metrics-box">${items.map(it => `
