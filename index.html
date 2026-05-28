@@ -906,6 +906,132 @@ function pickClosingVariant(workerClosing, domain, hash) {
     return workerClosing;
 }
 
+// ══════════════════════════════════════════════════════════════════
+// RISK CAUTIONS — same validator/fallback pattern as Guiding Principles.
+// Worker's risk cautions are highly repetitive ("Keep expectations grounded;
+// communicate openly", "Caution: ignoring the inner signal risks repeating...").
+// We blacklist those and substitute lens-aware lines from a small pool when
+// the AI didn't produce a CAUTION block.
+// ══════════════════════════════════════════════════════════════════
+
+const RISK_CAUTION_BLACKLIST = [
+    /^keep expectations grounded.*communicate openly/i,
+    /^caution.*ignoring the inner signal/i,
+    /^let intention.*not impulse/i,
+    /^protect your inner stability before any outward move/i,
+    /^this reading is symbolic — make your own informed decisions/i,
+    /^do not enter — not even a small position/i,
+    /^wait for a confirmed reversal/i,
+    /^high attachment-fixation signal/i,
+    /^high instability — avoid impulsive/i,
+    /^seek qualified professionals/i,
+    /^treat this as reflection, not instruction/i,
+    /^ground your energy before acting on anything/i
+];
+
+const CAUTION_FALLBACK_POOLS = {
+    love: {
+        HOLD_BACK: [
+            "Acting from urgency now risks tightening the very pattern you want to release.",
+            "Reaching out before you've steadied tends to repeat the dynamic, not resolve it.",
+            "The story is still writing itself — naming it too soon can lock it in place."
+        ],
+        GO: [
+            "Hoping is not the same as showing up — let action match the openness.",
+            "Don't mistake the relief of motion for the quality of the move.",
+            "Slow honesty lands further than fast certainty in this kind of moment."
+        ],
+        CAUTION: [
+            "Watching for what the connection does — not what it says — protects you here.",
+            "Curiosity about the pattern serves better than confidence about the outcome.",
+            "If the dynamic feels familiar, ask what familiarity is actually being preserved."
+        ]
+    },
+    fortune: {
+        HOLD_BACK: [
+            "Forcing motion through a contracted current usually multiplies the cost.",
+            "Mistaking restlessness for readiness leads to undoing what's working.",
+            "Acting to relieve discomfort tends to delay the actual opening."
+        ],
+        GO: [
+            "Move steadily — sudden big steps overshoot the quiet ground you're standing on.",
+            "Don't bypass the small grounded actions in pursuit of the dramatic ones.",
+            "The opening is real but it favors deliberateness, not haste."
+        ],
+        CAUTION: [
+            "Watch the same pattern — it's reporting more than the new question is.",
+            "Restlessness can disguise itself as intuition; check which one is speaking.",
+            "Stillness here is a strategy, not a stall."
+        ]
+    },
+    decision: {
+        HOLD_BACK: [
+            "Deciding from pressure now usually requires a second decision later.",
+            "A 'maybe' under stress hardens into a regret you'll have to undo.",
+            "Time is data — denying yourself it tends to cost more than it saves."
+        ],
+        GO: [
+            "Choose deliberately, not just decisively — the staging matters here.",
+            "Pick the option that lets you stay honest, not just the one that looks right.",
+            "Don't confuse clarity with certainty; clarity is enough."
+        ],
+        CAUTION: [
+            "Notice if you're choosing, or just escaping the discomfort of not choosing.",
+            "The information you don't have yet may be the deciding piece — wait if you can.",
+            "When both options feel equal, the body usually knows first."
+        ]
+    },
+    stock: {
+        HOLD_BACK: [
+            "Reaching outward before the inner well refills tends to deplete both.",
+            "Mistaking depletion for inadequacy keeps the scarcity loop running.",
+            "What you'd grasp now would cost what you'd need to hold it."
+        ],
+        GO: [
+            "Build slowly — what you can hold steady outlasts what you can grab fast.",
+            "Quiet recognition anchors more reliably than loud acknowledgment here.",
+            "Move toward what restores you, not just what proves you."
+        ],
+        CAUTION: [
+            "Comparing your inside to anyone's outside is the fastest way to feel poor.",
+            "What you discount tends to shrink; what you honor tends to grow.",
+            "Notice where you've outsourced the measurement of your worth."
+        ]
+    }
+};
+
+function isValidCautionLine(line) {
+    if (!line || typeof line !== 'string') return false;
+    const trimmed = line.trim().replace(/^[•\-*]\s*/, '');
+    if (!trimmed) return false;
+    const wordCount = trimmed.split(/\s+/).length;
+    if (wordCount < 6 || wordCount > 30) return false;
+    if (RISK_CAUTION_BLACKLIST.some(rx => rx.test(trimmed))) return false;
+    // Also reject if it matches the guidance blacklist (any generic AI line)
+    if (GENERIC_GUIDE_BLACKLIST.some(rx => rx.test(trimmed))) return false;
+    return true;
+}
+
+// Build final risk cautions: AI cautions that pass + fallback pool top-up.
+// Target: 1-2 lines (cautions are shorter than guidance).
+function buildFinalCautions(aiLines, workerCautions, domain, zone) {
+    // 1) Try AI lines first
+    const aiValid = (aiLines || []).map(l => l.trim().replace(/^[•\-*]\s*/, '')).filter(isValidCautionLine);
+    if (aiValid.length >= 1) return aiValid.slice(0, 2);
+
+    // 2) Try worker cautions if any pass the validator (rare — most are blacklisted)
+    const workerValid = (workerCautions || []).map(l => String(l).trim()).filter(isValidCautionLine);
+    if (workerValid.length >= 1) return workerValid.slice(0, 2);
+
+    // 3) Fall back to pool — pick 1 line stable per reading
+    const z = (zone === 'HOLD_BACK' || zone === 'GO') ? zone : 'CAUTION';
+    const pool = (CAUTION_FALLBACK_POOLS[domain] && CAUTION_FALLBACK_POOLS[domain][z]) || [];
+    if (!pool.length) return ['Stay aware of the pattern this reading just named.'];
+    const hash = (window._currentReadingHash || 0);
+    return [pool[hash % pool.length]];
+}
+
+
 const TAROT_CARDS_78 = [
     "The Fool","The Magician","The High Priestess","The Empress","The Emperor",
     "The Hierophant","The Lovers","The Chariot","Strength","The Hermit",
@@ -1402,6 +1528,8 @@ function showResultScreen(q, drawn, reversed) {
 
     // reset — show Zeus-themed rotating loading messages
     window._aiGuidance = null;
+    window._aiCautions = null;
+    window._aiClosing = null;
     document.getElementById('stream-content').innerHTML =
         '<div class="oracle-loading">' +
           '<div class="oracle-loading-msg" id="oracle-loading-msg">⚡ The Oracle of Zeus unfolds...</div>' +
@@ -1532,8 +1660,11 @@ function renderStreamText(text) {
         'ZEUS Final Oracle': '#D4AF37',
     };
     let html = text;
-    // Extract the AI-generated guidance block (GUIDE_START ... GUIDE_END)
-    // and stash it for the Guiding Principles box; hide from main oracle.
+    // Extract the AI-generated end blocks (lens-aware) and stash them.
+    // Three blocks: GUIDE_START/END (3 lines), CAUTION_START/END (1-2 lines), CLOSING_START/END (1 line).
+    // Hide from the main oracle body.
+
+    // GUIDE
     const guideMatch = html.match(/GUIDE_START([\s\S]*?)GUIDE_END/);
     if (guideMatch) {
         const lines = guideMatch[1]
@@ -1545,8 +1676,32 @@ function renderStreamText(text) {
         if (lines.length) window._aiGuidance = lines;
         html = html.replace(/GUIDE_START[\s\S]*?GUIDE_END/, '').trim();
     } else if (/GUIDE_START/.test(html)) {
-        // Block has started streaming but not yet closed — hide it during typing
         html = html.replace(/GUIDE_START[\s\S]*$/, '').trim();
+    }
+
+    // CAUTION
+    const cautionMatch = html.match(/CAUTION_START([\s\S]*?)CAUTION_END/);
+    if (cautionMatch) {
+        const lines = cautionMatch[1]
+            .split('\n')
+            .map(l => l.trim())
+            .filter(l => l.startsWith('•') || l.startsWith('-') || l.startsWith('*'))
+            .map(l => l.replace(/^[•\-*]\s*/, '').trim())
+            .filter(Boolean);
+        if (lines.length) window._aiCautions = lines;
+        html = html.replace(/CAUTION_START[\s\S]*?CAUTION_END/, '').trim();
+    } else if (/CAUTION_START/.test(html)) {
+        html = html.replace(/CAUTION_START[\s\S]*$/, '').trim();
+    }
+
+    // CLOSING
+    const closingMatch = html.match(/CLOSING_START([\s\S]*?)CLOSING_END/);
+    if (closingMatch) {
+        const line = closingMatch[1].trim().split('\n').map(l => l.trim()).filter(Boolean).join(' ');
+        if (line) window._aiClosing = line;
+        html = html.replace(/CLOSING_START[\s\S]*?CLOSING_END/, '').trim();
+    } else if (/CLOSING_START/.test(html)) {
+        html = html.replace(/CLOSING_START[\s\S]*$/, '').trim();
     }
     // Replace section headers
     Object.entries(sectionColors).forEach(([label, color]) => {
@@ -1708,14 +1863,30 @@ function renderDecisionLayersEN(layers) {
         </div>`;
     }
 
-    // Risk layer
+    // Risk layer — AI generates via CAUTION_START/END; validator+fallback handle the rest.
     const r = layers.risk;
-    if (r && (r.level || (r.cautions && r.cautions.length))) {
+    if (r && (r.level || (r.cautions && r.cautions.length) || (Array.isArray(window._aiCautions) && window._aiCautions.length))) {
+        // Determine domain/zone for fallback (same logic as Guiding Principles)
+        const _dom_r = (SERVER_METRICS && SERVER_METRICS.domain) || 'fortune';
+        let _zone_r = SERVER_METRICS && (SERVER_METRICS.posBias || SERVER_METRICS.energyKey);
+        if (!_zone_r) {
+            const a = ((SERVER_METRICS && SERVER_METRICS.action) || '').toLowerCase();
+            _zone_r = /hold|pause|wait|protect|breathe|stabili/.test(a) ? 'HOLD_BACK'
+                  : /forward|step|engage|move/.test(a) ? 'GO' : 'CAUTION';
+        }
+        if (_zone_r === 'EXPANSIVE' || _zone_r === 'OPENING') _zone_r = 'GO';
+        if (_zone_r === 'CONTRACTING' || _zone_r === 'GUARDED') _zone_r = 'HOLD_BACK';
+        if (_zone_r !== 'GO' && _zone_r !== 'HOLD_BACK') _zone_r = 'CAUTION';
+        const cautionsToShow = buildFinalCautions(
+            window._aiCautions || [],
+            r ? r.cautions : [],
+            _dom_r, _zone_r
+        );
         html += `<div class="layer-box">
             <div class="layer-title">⚠️ Risk</div>
             <div class="layer-content">
-                ${r.level ? `<div>Level: <strong>${r.level}</strong></div>` : ''}
-                ${(r.cautions || []).map(c => `<div>• ${c}</div>`).join('')}
+                ${r && r.level ? `<div>Level: <strong>${r.level}</strong></div>` : ''}
+                ${cautionsToShow.map(c => `<div>• ${c}</div>`).join('')}
             </div>
         </div>`;
     }
@@ -1757,14 +1928,27 @@ function renderDecisionLayersEN(layers) {
             let _ch = 0;
             for (let i = 0; i < hashSrc.length; i++) _ch = (_ch * 31 + hashSrc.charCodeAt(i)) >>> 0;
             window._currentReadingHash = _ch;
-            // Worker closing is the LAST line; substitute occasionally for variety.
+            // Prefer AI lens-aware closing if it passes validation, then closing-pool rotation,
+            // then worker default.
             const lines = text.split('\n');
             if (lines.length >= 2) {
                 const lastLine = lines[lines.length - 1].trim();
                 const _dom = (SERVER_METRICS && SERVER_METRICS.domain) || 'fortune';
-                const swapped = pickClosingVariant(lastLine, _dom, _ch);
-                if (swapped && swapped !== lastLine) {
-                    lines[lines.length - 1] = swapped;
+                let finalClosing = lastLine;
+                if (window._aiClosing && typeof window._aiClosing === 'string') {
+                    const trimmed = window._aiClosing.trim().replace(/^[•\-*]\s*/, '');
+                    const wordCount = trimmed.split(/\s+/).length;
+                    if (wordCount >= 8 && wordCount <= 35
+                        && !GENERIC_GUIDE_BLACKLIST.some(rx => rx.test(trimmed))) {
+                        finalClosing = trimmed;
+                    }
+                }
+                if (finalClosing === lastLine) {
+                    const swapped = pickClosingVariant(lastLine, _dom, _ch);
+                    if (swapped && swapped !== lastLine) finalClosing = swapped;
+                }
+                if (finalClosing !== lastLine) {
+                    lines[lines.length - 1] = finalClosing;
                     text = lines.join('\n');
                 }
             }
