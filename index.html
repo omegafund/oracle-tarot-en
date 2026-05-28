@@ -1709,6 +1709,10 @@ function renderStreamText(text) {
         const re = new RegExp(`(^|\\n)(${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})\\n`, 'g');
         html = html.replace(re, `$1<span class="section-label" style="color:${color}">✦ ${label}</span>\n`);
     });
+    // Blank line (paragraph break) → visible paragraph spacing.
+    // Single newline → line break. This makes past/present/future read as
+    // distinct paragraphs, not one merged block.
+    html = html.replace(/\n{2,}/g, '<span style="display:block;height:0.9em;"></span>');
     html = html.replace(/\n/g, '<br>');
     return html;
 }
@@ -1845,16 +1849,10 @@ function renderDecisionLayersEN(layers) {
         </div>`;
     }
 
-    // Card Narrative (Past / Present / Future card meanings)
-    const narr = SERVER_METRICS && SERVER_METRICS.cardNarrative;
-    if (Array.isArray(narr) && narr.length) {
-        html += `<div class="layer-box">
-            <div class="layer-title">🃏 Card Narrative</div>
-            <div class="layer-content">
-                ${narr.map(line => `<div style="margin: 4px 0;">${line}</div>`).join('')}
-            </div>
-        </div>`;
-    }
+    // Card Narrative box REMOVED — the AI body now interprets past/present/future
+    // as separate blank-line paragraphs. The worker's generic card-meaning box was
+    // redundant and was the recurring source of reversed-card meaning conflicts
+    // (e.g. worker said "recovery" while the body said "exhaustion"). Gone now.
 
     // Signal layer — with VERDICT AUTHORITY RULE applied.
     // The narrative body's tone constrains the verdict — verdict cannot say
@@ -1888,22 +1886,27 @@ function renderDecisionLayersEN(layers) {
             }
         }
 
-        // Filter generic signal summary if it doesn't match the body tone
+        // SIGNAL as EMOTIONAL RESONANCE ECHO (not an outcome verdict).
+        // Per guidance: Signal's role is a short emotional-weather note, not a
+        // relationship outcome judgment. We keep the verdict line (constrained by
+        // Verdict Authority above) but reframe the summary toward resonance.
         let summary = String(sig.summary || '').trim();
-        const summaryOptimistic = /(warming|opening|favorable|momentum|brightens)/.test(summary.toLowerCase());
+        const summaryOptimistic = /(warming|opening|favorable|momentum|brightens|tilts toward|rising tide)/.test(summary.toLowerCase());
+
+        // If summary is optimistic but the body is heavy, OR summary reads like a
+        // blunt outcome call, replace with a resonance echo matched to the body's tone.
+        const RESONANCE_ECHO = {
+            grief:      "The tension here seems tied to what remains unfinished.",
+            stagnation: "Something here asks for patience, not pressure.",
+            friction:   "Stillness may reveal more than pursuit right now.",
+            calm:       "A quiet steadiness runs underneath this.",
+            generic:    "Something here asks to be felt before it's decided."
+        };
         if (summary && summaryOptimistic && heavyNarrative && !hasExpansionLanguage) {
-            // Pick a tone-matching micro-signal from a small curated pool
-            // (this is the "curated micro-pool" approach from your guidance)
-            const SIGNAL_MICRO = {
-                grief: "Something here lingers because it never fully completed itself.",
-                stagnation: "The pattern keeps suspending its own resolution.",
-                friction: "The tension softens briefly but doesn't fully resolve.",
-                generic: "Something remains emotionally unfinished here."
-            };
-            summary = griefCues.test(bodyText) ? SIGNAL_MICRO.grief
-                    : stagnationCues.test(bodyText) ? SIGNAL_MICRO.stagnation
-                    : friction.test(bodyText) ? SIGNAL_MICRO.friction
-                    : SIGNAL_MICRO.generic;
+            summary = griefCues.test(bodyText) ? RESONANCE_ECHO.grief
+                    : stagnationCues.test(bodyText) ? RESONANCE_ECHO.stagnation
+                    : friction.test(bodyText) ? RESONANCE_ECHO.friction
+                    : RESONANCE_ECHO.generic;
         }
 
         html += `<div class="layer-box">
@@ -1983,52 +1986,48 @@ function renderDecisionLayersEN(layers) {
     if (_showDeep && ci && (ci.summary || ci.detail || (typeof ci === 'string' && ci.length))) {
         let text = typeof ci === 'string' ? ci : (ci.detail || ci.summary || '');
         if (text) {
-            // Strip fate/destiny language from worker output (extra safety net beyond worker pool)
+            // Strip fate/destiny language AND worker card-pool restatements.
+            // The worker often injects lines like "The energy of X (reversed) suggests <pool meaning>"
+            // which (a) repeats the card and (b) conflicts with the body. Remove those.
             text = text
                 .replace(/^.*flow of fate.*$/gmi, '')
                 .replace(/^.*fate leans.*$/gmi, '')
                 .replace(/^.*aligned energy invites.*$/gmi, '')
                 .replace(/^.*bold step can create.*$/gmi, '')
                 .replace(/^.*invites good results.*$/gmi, '')
+                .replace(/^\s*The energy of .*?suggests .*?\.\s*$/gmi, '')  // remove "The energy of X suggests Y." restatements
                 .replace(/\n{2,}/g, '\n')
                 .trim();
 
-            // Compute stable hash for closing rotation
             const cardsForHash = (SERVER_METRICS && SERVER_METRICS.cards) || (SERVER_METRICS && SERVER_METRICS.cleanCards) || [];
             const hashSrc = Array.isArray(cardsForHash) ? cardsForHash.join('|') : String(cardsForHash);
             let _ch = 0;
             for (let i = 0; i < hashSrc.length; i++) _ch = (_ch * 31 + hashSrc.charCodeAt(i)) >>> 0;
             window._currentReadingHash = _ch;
 
-            // Prefer AI lens-aware closing, then closing-pool rotation, then worker default
-            const lines = text.split('\n').filter(Boolean);
-            if (lines.length >= 1) {
-                const lastLine = lines[lines.length - 1].trim();
-                const _dom = (SERVER_METRICS && SERVER_METRICS.domain) || 'fortune';
-                let finalClosing = lastLine;
-                if (window._aiClosing && typeof window._aiClosing === 'string') {
-                    const trimmed = window._aiClosing.trim().replace(/^[•\-*]\s*/, '');
-                    const wordCount = trimmed.split(/\s+/).length;
-                    if (wordCount >= 8 && wordCount <= 35
-                        && !GENERIC_GUIDE_BLACKLIST.some(rx => rx.test(trimmed))) {
-                        finalClosing = trimmed;
-                    }
-                }
-                if (finalClosing === lastLine) {
-                    const swapped = pickClosingVariant(lastLine, _dom, _ch);
-                    if (swapped && swapped !== lastLine) finalClosing = swapped;
-                }
-                if (finalClosing !== lastLine) {
-                    lines[lines.length - 1] = finalClosing;
+            // Deep Interpretation is now ONE sentence only — a perspective note, not a
+            // conclusion, not a card reinterpretation, not a new direction.
+            // Prefer AI's lens-aware closing (1 line); else first surviving worker line.
+            let oneLine = '';
+            if (window._aiClosing && typeof window._aiClosing === 'string') {
+                const trimmed = window._aiClosing.trim().replace(/^[•\-*]\s*/, '');
+                const wc = trimmed.split(/\s+/).length;
+                if (wc >= 8 && wc <= 30 && !GENERIC_GUIDE_BLACKLIST.some(rx => rx.test(trimmed))) {
+                    oneLine = trimmed;
                 }
             }
+            if (!oneLine) {
+                const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+                // take the LAST surviving line (closing observation), capped to one sentence
+                let cand = lines.length ? lines[lines.length - 1] : '';
+                cand = cand.split(/(?<=[.!?])\s+/)[0] || cand;  // first sentence only
+                oneLine = cand;
+            }
 
-            // Cap at 2 lines max (was 3) — your guidance to compress
-            const finalText = lines.slice(-2).join('\n');
-            if (finalText) {
+            if (oneLine) {
                 html += `<div class="layer-box" style="border-left-color: var(--gold);">
                     <div class="layer-title">🔍 Deep Interpretation</div>
-                    <div class="layer-content" style="white-space: pre-wrap;">${finalText}</div>
+                    <div class="layer-content">${oneLine}</div>
                 </div>`;
             }
         }
