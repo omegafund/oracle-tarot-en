@@ -1723,14 +1723,18 @@ async function streamReading(question, drawn, reversed) {
                         metricsReceived = true;  // suppress metrics/teaser
                         continue;
                     } else if (parsed._type === 'cooldown') {
-                        // Layer 1: daily deep limit reached — gentle cooldown.
-                        if (window._oracleRotator) { clearInterval(window._oracleRotator); window._oracleRotator = null; }
-                        contentEl.innerHTML = `<div style="padding:24px;text-align:center;line-height:1.7;">
-                            <div style="font-size:1.5rem;margin-bottom:12px;">🌙</div>
-                            <div style="font-size:1.02rem;color:#F1C40F;">${parsed.message}</div>
-                        </div>`;
-                        metricsReceived = true;
-                        continue;
+    if (window._oracleRotator) { clearInterval(window._oracleRotator); window._oracleRotator = null; }
+    // hide PRO unlock box on cooldown — user already paid
+    const _cdPro = document.getElementById('pro-unlock');
+    if (_cdPro) _cdPro.style.display = 'none';
+    const _cdBadge = document.getElementById('result-domain-badge');
+    if (_cdBadge) _cdBadge.style.display = 'none';
+    contentEl.innerHTML = `<div style="padding:24px;text-align:center;line-height:1.7;">
+        <div style="font-size:1.5rem;margin-bottom:12px;">🌙</div>
+        <div style="font-size:1.02rem;color:#F1C40F;">${parsed.message}</div>
+    </div>`;
+    metricsReceived = true;
+    continue;
                     } else if (parsed._type === 'dependency_note') {
                         // Layer 2: gentle dependency nudge — stash to append after reading.
                         window._dependencyNote = parsed.text;
