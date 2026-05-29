@@ -1723,18 +1723,14 @@ async function streamReading(question, drawn, reversed) {
                         metricsReceived = true;  // suppress metrics/teaser
                         continue;
                     } else if (parsed._type === 'cooldown') {
-    if (window._oracleRotator) { clearInterval(window._oracleRotator); window._oracleRotator = null; }
-    // hide PRO unlock box on cooldown — user already paid
-    const _cdPro = document.getElementById('pro-unlock');
-    if (_cdPro) _cdPro.style.display = 'none';
-    const _cdBadge = document.getElementById('result-domain-badge');
-    if (_cdBadge) _cdBadge.style.display = 'none';
-    contentEl.innerHTML = `<div style="padding:24px;text-align:center;line-height:1.7;">
-        <div style="font-size:1.5rem;margin-bottom:12px;">🌙</div>
-        <div style="font-size:1.02rem;color:#F1C40F;">${parsed.message}</div>
-    </div>`;
-    metricsReceived = true;
-    continue;
+                        // Layer 1: daily deep limit reached — gentle cooldown.
+                        if (window._oracleRotator) { clearInterval(window._oracleRotator); window._oracleRotator = null; }
+                        contentEl.innerHTML = `<div style="padding:24px;text-align:center;line-height:1.7;">
+                            <div style="font-size:1.5rem;margin-bottom:12px;">🌙</div>
+                            <div style="font-size:1.02rem;color:#F1C40F;">${parsed.message}</div>
+                        </div>`;
+                        metricsReceived = true;
+                        continue;
                     } else if (parsed._type === 'dependency_note') {
                         // Layer 2: gentle dependency nudge — stash to append after reading.
                         window._dependencyNote = parsed.text;
@@ -1834,8 +1830,45 @@ function renderStreamText(text) {
     return html;
 }
 
+// ── Zeus Balancing Layer ──────────────────────────────────────
+// Code-enforced phrase cooldown (100% vs prompt's ~70%).
+// ONLY phrase-level, tarot-specific expressions — never single words
+// that could appear in neutral contexts. Safe to replace globally.
+const _ZEUS_BALANCE_MAP = [
+  [/protect your heart/gi,   'stay grounded in yourself'],
+  [/drawing inward/gi,       'becoming more still'],
+  [/quiet grief/gi,          'unspoken heaviness'],
+  [/sacred waiting/gi,       'deliberate pause'],
+  [/protect yourself/gi,     'remain clear-eyed'],
+  [/retreat into stillness/gi,'let clarity settle'],
+  [/withdraw gently/gi,      'move deliberately'],
+  [/hold your heart/gi,      'stay steady'],
+];
+function applyZeusBalancing(text) {
+  if (!text) return text;
+  // Track which substitutes were already used this reading to avoid
+  // replacing one repetition with another repetition.
+  const used = new Set();
+  let out = text;
+  _ZEUS_BALANCE_MAP.forEach(([re, sub]) => {
+    if (!used.has(sub) && re.test(out)) {
+      out = out.replace(re, sub);
+      used.add(sub);
+    }
+  });
+  return out;
+}
+
 // ── On stream complete ──
 function onStreamComplete(fullText) {
+    // Apply code-enforced phrase balancing BEFORE rendering metrics.
+    // This catches phrases the prompt discouraged but AI still used.
+    const balancedText = applyZeusBalancing(fullText);
+    if (balancedText !== fullText) {
+        const contentEl = document.getElementById('stream-content');
+        if (contentEl) contentEl.innerHTML = renderStreamText(balancedText);
+    }
+
     // Layer 2: gentle dependency note appended below the reading (non-blocking).
     if (window._dependencyNote) {
         const contentEl = document.getElementById('stream-content');
@@ -2215,50 +2248,17 @@ function showPayModal() {
 
 <!-- Legal footer -->
 <div style="text-align:center;padding:32px 20px 48px;margin-top:40px;border-top:1px solid rgba(241,196,15,0.1);">
-
-  <p style="color:rgba(255,255,255,0.3);font-size:0.82rem;line-height:1.6;margin-bottom:12px;">
-    Zeus Tarot is an AI-powered self-reflection tool.
-    Not a fortune-telling or predictive service.
+  <p style="color:rgba(255,255,255,0.3);font-size:0.82rem;margin-bottom:10px;">
+    Zeus Tarot is an AI-powered self-reflection tool. Not a fortune-telling or predictive service.
   </p>
-
-  <p style="font-size:0.82rem;line-height:1.8;margin-bottom:10px;">
-
-    <a href="terms.html"
-       style="color:rgba(241,196,15,0.6);text-decoration:none;margin:0 10px;">
-       Terms of Service
-    </a>
-
+  <p style="font-size:0.82rem;">
+    <a href="terms.html" style="color:rgba(241,196,15,0.6);text-decoration:none;margin:0 10px;">Terms of Service</a>
     <span style="color:rgba(255,255,255,0.2);">·</span>
-
-    <a href="privacy.html"
-       style="color:rgba(241,196,15,0.6);text-decoration:none;margin:0 10px;">
-       Privacy Policy
-    </a>
-
+    <a href="privacy.html" style="color:rgba(241,196,15,0.6);text-decoration:none;margin:0 10px;">Privacy Policy</a>
     <span style="color:rgba(255,255,255,0.2);">·</span>
-
-    <a href="refund.html"
-       style="color:rgba(241,196,15,0.6);text-decoration:none;margin:0 10px;">
-       Refund Policy
-    </a>
-
-    <span style="color:rgba(255,255,255,0.2);">·</span>
-
-    <a href="disclaimer.html"
-       style="color:rgba(241,196,15,0.6);text-decoration:none;margin:0 10px;">
-       Disclaimer
-    </a>
-
+    <a href="refund.html" style="color:rgba(241,196,15,0.6);text-decoration:none;margin:0 10px;">Refund Policy</a>
   </p>
-
-  <p style="color:rgba(255,255,255,0.35);font-size:0.8rem;margin-top:6px;">
-    omegafund01@gmail.com
-  </p>
-
-  <p style="color:rgba(255,255,255,0.2);font-size:0.78rem;margin-top:12px;">
-    © 2026 Zeus Tarot. All rights reserved.
-  </p>
-
+  <p style="color:rgba(255,255,255,0.2);font-size:0.78rem;margin-top:10px;">© 2026 Zeus Tarot. All rights reserved.</p>
 </div>
 
 </body>
