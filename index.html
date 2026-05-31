@@ -1721,8 +1721,8 @@ async function streamReading(question, drawn, reversed) {
         document.getElementById('stream-content').innerHTML =
             `<div style="color:rgba(231,76,60,0.9);padding:20px;text-align:center;">
                 <div style="font-size:1.2rem;margin-bottom:8px;">⚠️</div>
-                <div>Connection error. Please try again.</div>
-                <button onclick="goHome()" style="margin-top:14px;padding:8px 20px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:8px;cursor:pointer;">Back</button>
+                <div>Something interrupted the reading. This is usually temporary — please try again in a moment.</div>
+                <button onclick="goHome()" style="margin-top:14px;padding:8px 20px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:8px;cursor:pointer;">Try Again</button>
             </div>`;
     }
 }
