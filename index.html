@@ -1250,7 +1250,25 @@ function persistUserState() {
 function restoreUserState() {
     try {
         const raw = localStorage.getItem('zeus_user_state');
-        if (!raw) { updatePremiumUI(); return; }
+
+        // Fallback: if zeus_user_state missing but zeus_token exists
+        // (set by unlock-test or direct token injection), restore from it.
+        if (!raw) {
+            const directToken = localStorage.getItem('zeus_token');
+            if (directToken && directToken.indexOf('.') > 0) {
+                try {
+                    const payloadB64 = directToken.split('.')[0];
+                    const payload = JSON.parse(atob(payloadB64.replace(/-/g,'+').replace(/_/g,'/')));
+                    if (payload && payload.plan && payload.exp && Date.now() < payload.exp) {
+                        unlockPremium(payload.plan, directToken);
+                        return;
+                    }
+                } catch (_) { /* ignore parse errors */ }
+            }
+            updatePremiumUI();
+            return;
+        }
+
         const data = JSON.parse(raw);
 
         if (data.expiresAt && Date.now() > data.expiresAt) {
@@ -1628,7 +1646,7 @@ async function streamReading(question, drawn, reversed) {
                 cards:    cardsStr,
                 reversed: reversedStr,
                 paid:     isPremium(),
-                token:    STATE.user.sessionToken || null,
+                token:    STATE.user.sessionToken || localStorage.getItem('zeus_token') || null,
                 domain:   CURRENT_DOMAIN,
                 prevContext: _prevContext,
             })
