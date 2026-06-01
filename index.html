@@ -1687,9 +1687,14 @@ async function streamReading(question, drawn, reversed) {
                     } else if (parsed._type === 'cooldown') {
                         // Layer 1: daily deep limit reached — gentle cooldown.
                         if (window._oracleRotator) { clearInterval(window._oracleRotator); window._oracleRotator = null; }
-                        contentEl.innerHTML = `<div style="padding:24px;text-align:center;line-height:1.7;">
-                            <div style="font-size:1.5rem;margin-bottom:12px;">🌙</div>
-                            <div style="font-size:1.02rem;color:#F1C40F;">${parsed.message}</div>
+                        // Hide PRO box and badge — user already paid, don't show upgrade prompt
+                        ['pro-unlock','result-domain-badge','metrics-box','decision-layers'].forEach(id => {
+                            const el = document.getElementById(id);
+                            if (el) el.style.display = 'none';
+                        });
+                        contentEl.innerHTML = `<div style="padding:32px 24px;text-align:center;line-height:1.8;">
+                            <div style="font-size:1.5rem;margin-bottom:16px;">🌙</div>
+                            <div style="font-size:1.05rem;color:#F1C40F;max-width:480px;margin:0 auto;">${parsed.message}</div>
                         </div>`;
                         metricsReceived = true;
                         continue;
