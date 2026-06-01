@@ -707,7 +707,8 @@ function isValidGuideLine(line) {
     if (!line || typeof line !== 'string') return false;
     const trimmed = line.trim().replace(/^[•\-*]\s*/, '');
     if (!trimmed) return false;
-    if (wordCount < 6 || wordCount > 30) return false;
+    const wordCount = trimmed.split(/\s+/).length;
+    if (wordCount < 5 || wordCount > 40) return false;
     return true;
 }
 
