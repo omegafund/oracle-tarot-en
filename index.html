@@ -2017,9 +2017,14 @@ function onStreamComplete(fullText) {
         renderDecisionLayersEN(SERVER_METRICS.layers);
         const proBox = document.getElementById('pro-unlock');
         if (proBox) proBox.style.display = 'none';
-    } else {
+    } else if (!isPremium()) {
         const proBox = document.getElementById('pro-unlock');
         if (proBox) proBox.style.display = '';
+    }
+    // If paid, always hide PRO box regardless of reading state
+    if (isPremium()) {
+        const proBox = document.getElementById('pro-unlock');
+        if (proBox) proBox.style.display = 'none';
     }
 
     // Layer 2-Lite: persist lightweight state for next reading's continuity hint.
