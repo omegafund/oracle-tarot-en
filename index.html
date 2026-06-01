@@ -702,206 +702,29 @@ const WORKER_URL = 'https://tarot-api-en.omegafund01.workers.dev';
 
 // Lines we never want to display — even if AI generates them.
 // Mostly the generic worker fallback rules and known clichés.
-const GENERIC_GUIDE_BLACKLIST = [
-    // worker fallback rules
-    /^do not chase[\s\S]*?mutual interest set the pace/i,
-    /^speak honestly rather than testing/i,
-    /^protect your own emotional stability first/i,
-    /^trust intuition over impulse/i,
-    /^do not force what is not ready/i,
-    /^inner stability comes/i,
-    /^separate fear from genuine intuition/i,
-    /^a clear .no. is also a valid answer/i,
-    /^decide from your present self/i,
-    /^treat this as reflection, not instruction/i,
-    /^ground your energy before acting on anything/i,
-    /^seek qualified professionals/i,
-    // AI clichés
-    /^keep expectations grounded.*communicate openly/i,
-    /^trust the (journey|process)/i,
-    /^trust your intuition\.?\s*$/i,
-    /^listen to your heart\.?\s*$/i,
-    /^everything happens for a reason/i,
-    /^the universe (will|wants|is)/i,
-    /^this was meant to happen/i
-];
-
-// 4-domain fallback guidance pool — used when AI gives an invalid line or
-// produces nothing. Each entry is psychologically textured, not generic safety.
-const GUIDE_FALLBACK_POOLS = {
-    love: {
-        HOLD_BACK: [
-            "Notice the difference between missing the person and missing the feeling they represented.",
-            "Avoid filling silence with assumptions about what they may be feeling.",
-            "If you find yourself replaying conversations, ask what part of you is rehearsing for.",
-            "Some endings linger because they never fully became emotionally coherent.",
-            "Distance often reveals what closeness was hiding — let the picture form.",
-            "Reaching when you feel unsteady tends to confirm fears, not resolve them."
-        ],
-        GO: [
-            "Let what you actually feel set the pace, not what you think you should feel.",
-            "A clear move from a settled place tends to land better than a perfect move from a tense one.",
-            "Speak the smaller truth before the bigger one — it usually opens the path.",
-            "Presence reads more clearly than performance in moments like this.",
-            "Showing up as you are tells the truth faster than any explanation."
-        ],
-        CAUTION: [
-            "Watch what the connection actually does, not what it promises.",
-            "Patterns repeat until they're named — pay attention to what keeps recurring.",
-            "When you don't know what to do, slow tends to be more accurate than smart.",
-            "Let the dynamic prove itself in small things before trusting it in big ones.",
-            "Curiosity about what's actually happening serves you better than certainty about what should."
-        ]
-    },
-    fortune: {
-        HOLD_BACK: [
-            "Conserve more than you spend in this stretch — capacity matters more than reach.",
-            "Things that ask for force usually aren't ready yet.",
-            "Tending to the foundation reads stronger than building the next floor here.",
-            "Rest is not the absence of progress; it's part of the rhythm.",
-            "A pause now often shortens a longer detour later."
-        ],
-        GO: [
-            "Small steady steps go further than one large gamble in this current.",
-            "Move toward what feels coherent, not just toward what feels exciting.",
-            "Momentum builds when you stop waiting for the perfect moment.",
-            "Choose the next right action — the whole map doesn't need to be visible.",
-            "The opening is real — meet it with steadiness, not urgency."
-        ],
-        CAUTION: [
-            "Watch the pattern that keeps showing up — it's telling you something.",
-            "When direction is unclear, gather information before changing course.",
-            "Notice whether you're waiting or stalling — they look the same but feel different.",
-            "Sometimes the next step is just being present to what is.",
-            "Stillness is a form of strategy in unclear weather."
-        ]
-    },
-    decision: {
-        HOLD_BACK: [
-            "If the answer is unclear, that's often the answer.",
-            "A 'not yet' is not a 'no' — distinguish the two carefully.",
-            "Buying time is sometimes the highest-value decision you can make.",
-            "Decisions made from anxiety tend to need a second decision later.",
-            "Wait for one more piece of information — but only one."
-        ],
-        GO: [
-            "Move from clarity, not from pressure.",
-            "Pick the option that lets you be honest, not just the one that looks right.",
-            "Choose deliberately — the staging matters as much as the choice.",
-            "Trust the version of you that has actually thought this through.",
-            "The conditions don't need to be perfect for the move to be right."
-        ],
-        CAUTION: [
-            "The information you don't have yet may be the deciding factor.",
-            "Notice whether you're choosing or just reacting.",
-            "When both options feel weighted, the body usually knows before the mind.",
-            "Wait for the kind of clarity that doesn't depend on someone else's approval.",
-            "Decide what kind of person you want to be on the other side of this — start there."
-        ]
-    },
-    stock: {
-        HOLD_BACK: [
-            "Restoration matters more than expansion in this stretch.",
-            "Notice what depletes your sense of enough — that's the real signal.",
-            "Worth doesn't have to be earned in this season; it can be remembered.",
-            "Tend the inner well before drawing from it again.",
-            "Comparing your inside to anyone's outside is the fastest way to feel poor."
-        ],
-        GO: [
-            "Let your sense of value rest on what you actually do, not on what others see.",
-            "Stay grounded in what genuinely matters as the ground firms beneath you.",
-            "Quiet recognition often anchors better than loud acknowledgment.",
-            "Move toward what restores you, not just what proves you.",
-            "Build slowly — what you can hold steadily lasts longer than what you can grab fast."
-        ],
-        CAUTION: [
-            "Notice the difference between needing more and wanting more.",
-            "Worth is felt, not measured — check where you've been outsourcing the measurement.",
-            "Where you give energy is where your value follows.",
-            "What you honor tends to expand; what you discount tends to shrink.",
-            "Let your relationship with enough catch up to your relationship with more."
-        ]
-    }
-};
-
-// Validate an AI-generated guidance line: must be 6-30 words, not blacklisted, contain meaningful content.
+// Guidance validation — word count only, no blacklist, no fallback pool.
 function isValidGuideLine(line) {
     if (!line || typeof line !== 'string') return false;
     const trimmed = line.trim().replace(/^[•\-*]\s*/, '');
     if (!trimmed) return false;
-    const wordCount = trimmed.split(/\s+/).length;
     if (wordCount < 6 || wordCount > 30) return false;
-    if (GENERIC_GUIDE_BLACKLIST.some(rx => rx.test(trimmed))) return false;
     return true;
 }
 
-// Build the final guidance list: AI lines that pass validation, supplemented from fallback pool if needed.
+// Build guidance list from AI output — no fallback pool.
 function buildFinalGuidance(aiLines, domain, posBias) {
     const valid = (aiLines || []).map(l => l.trim().replace(/^[•\-*]\s*/, '')).filter(isValidGuideLine);
-    // Need exactly 3 lines. Top up from fallback pool, picking by hash so it's stable per reading.
-    const zone = (posBias === 'HOLD_BACK' || posBias === 'GO') ? posBias : 'CAUTION';
-    const pool = (GUIDE_FALLBACK_POOLS[domain] && GUIDE_FALLBACK_POOLS[domain][zone]) || [];
-    if (valid.length >= 3) return valid.slice(0, 3);
-    // Hash seed for stable picking
-    let seed = (domain + zone + (window._currentReadingHash || '')).split('').reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 0);
-    const used = new Set(valid.map(v => v.toLowerCase()));
-    const padded = [...valid];
-    let safety = 0;
-    while (padded.length < 3 && safety++ < pool.length * 2) {
-        const candidate = pool[seed % pool.length];
-        seed = (seed * 31 + 7) >>> 0;
-        if (candidate && !used.has(candidate.toLowerCase())) {
-            padded.push(candidate);
-            used.add(candidate.toLowerCase());
-        }
-    }
-    // If pool exhausted (shouldn't happen with 5-6 entries), top up with whatever remains
-    while (padded.length < 3 && pool.length) {
-        padded.push(pool[(seed + padded.length) % pool.length]);
-    }
-    return padded.slice(0, 3);
+    return valid.slice(0, 3);
 }
 
 // Closing-line variants for Deep Interpretation — supplement worker's 3 closings.
 // Worker provides 3 closings per domain; this pool gives 4 more for variety.
-const CLOSING_FALLBACK_POOLS = {
-    love: [
-        "What feels unresolved here may not need an answer yet — just attention.",
-        "The most honest move sometimes is the one that doesn't try to fix anything.",
-        "Notice what the connection is doing, not just what it's saying.",
-        "Slow truth lands better than fast certainty in this kind of moment."
-    ],
-    fortune: [
-        "Steady attention to the small things usually carries the day here.",
-        "Let the current show its hand before deciding which direction is yours.",
-        "What restores you is also what equips you for what's ahead.",
-        "The honest next step is usually the smaller one."
-    ],
-    decision: [
-        "The clearer answer often comes from sitting with the question one more day.",
-        "Choose what lets you stay recognizable to yourself.",
-        "Information that arrives late is still information — wait if you can.",
-        "A clean 'maybe' beats a forced 'yes' in this kind of fork."
-    ],
-    stock: [
-        "Tend the felt sense of enough — it's the foundation of everything else.",
-        "Worth grows in quiet, not in display.",
-        "Your relationship with value reshapes when you stop comparing.",
-        "Slow restoration of inner ground usually outperforms fast acquisition of outer markers."
-    ]
-};
-
 // Pick a varied closing — if worker's closing repeats too often, supplement.
 // (Used only as a stable-per-reading polish, not a replacement.)
 function pickClosingVariant(workerClosing, domain, hash) {
-    if (!workerClosing) return workerClosing;
-    // Rotate: every 4th reading (by hash), substitute from index pool to break the 50%+ repetition.
-    const pool = CLOSING_FALLBACK_POOLS[domain] || [];
-    if (!pool.length) return workerClosing;
-    const slot = (hash || 0) % 4;
-    if (slot === 0) return pool[((hash || 0) >> 2) % pool.length];
-    return workerClosing;
+    return workerClosing; // Use AI output directly
 }
+
 
 // ══════════════════════════════════════════════════════════════════
 // RISK CAUTIONS — same validator/fallback pattern as Guiding Principles.
@@ -926,77 +749,6 @@ const RISK_CAUTION_BLACKLIST = [
     /^ground your energy before acting on anything/i
 ];
 
-const CAUTION_FALLBACK_POOLS = {
-    love: {
-        HOLD_BACK: [
-            "Acting from urgency now risks tightening the very pattern you want to release.",
-            "Reaching out before you've steadied tends to repeat the dynamic, not resolve it.",
-            "The story is still writing itself — naming it too soon can lock it in place."
-        ],
-        GO: [
-            "Hoping is not the same as showing up — let action match the openness.",
-            "Don't mistake the relief of motion for the quality of the move.",
-            "Slow honesty lands further than fast certainty in this kind of moment."
-        ],
-        CAUTION: [
-            "Watching for what the connection does — not what it says — protects you here.",
-            "Curiosity about the pattern serves better than confidence about the outcome.",
-            "If the dynamic feels familiar, ask what familiarity is actually being preserved."
-        ]
-    },
-    fortune: {
-        HOLD_BACK: [
-            "Forcing motion through a contracted current usually multiplies the cost.",
-            "Mistaking restlessness for readiness leads to undoing what's working.",
-            "Acting to relieve discomfort tends to delay the actual opening."
-        ],
-        GO: [
-            "Move steadily — sudden big steps overshoot the quiet ground you're standing on.",
-            "Don't bypass the small grounded actions in pursuit of the dramatic ones.",
-            "The opening is real but it favors deliberateness, not haste."
-        ],
-        CAUTION: [
-            "Watch the same pattern — it's reporting more than the new question is.",
-            "Restlessness can disguise itself as intuition; check which one is speaking.",
-            "Stillness here is a strategy, not a stall."
-        ]
-    },
-    decision: {
-        HOLD_BACK: [
-            "Deciding from pressure now usually requires a second decision later.",
-            "A 'maybe' under stress hardens into a regret you'll have to undo.",
-            "Time is data — denying yourself it tends to cost more than it saves."
-        ],
-        GO: [
-            "Choose deliberately, not just decisively — the staging matters here.",
-            "Pick the option that lets you stay honest, not just the one that looks right.",
-            "Don't confuse clarity with certainty; clarity is enough."
-        ],
-        CAUTION: [
-            "Notice if you're choosing, or just escaping the discomfort of not choosing.",
-            "The information you don't have yet may be the deciding piece — wait if you can.",
-            "When both options feel equal, the body usually knows first."
-        ]
-    },
-    stock: {
-        HOLD_BACK: [
-            "Reaching outward before the inner well refills tends to deplete both.",
-            "Mistaking depletion for inadequacy keeps the scarcity loop running.",
-            "What you'd grasp now would cost what you'd need to hold it."
-        ],
-        GO: [
-            "Build slowly — what you can hold steady outlasts what you can grab fast.",
-            "Quiet recognition anchors more reliably than loud acknowledgment here.",
-            "Move toward what restores you, not just what proves you."
-        ],
-        CAUTION: [
-            "Comparing your inside to anyone's outside is the fastest way to feel poor.",
-            "What you discount tends to shrink; what you honor tends to grow.",
-            "Notice where you've outsourced the measurement of your worth."
-        ]
-    }
-};
-
 function isValidCautionLine(line) {
     if (!line || typeof line !== 'string') return false;
     const trimmed = line.trim().replace(/^[•\-*]\s*/, '');
@@ -1005,7 +757,6 @@ function isValidCautionLine(line) {
     if (wordCount < 6 || wordCount > 30) return false;
     if (RISK_CAUTION_BLACKLIST.some(rx => rx.test(trimmed))) return false;
     // Also reject if it matches the guidance blacklist (any generic AI line)
-    if (GENERIC_GUIDE_BLACKLIST.some(rx => rx.test(trimmed))) return false;
     return true;
 }
 
@@ -1016,16 +767,10 @@ function buildFinalCautions(aiLines, workerCautions, domain, zone) {
     const aiValid = (aiLines || []).map(l => l.trim().replace(/^[•\-*]\s*/, '')).filter(isValidCautionLine);
     if (aiValid.length >= 1) return aiValid.slice(0, 2);
 
-    // 2) Try worker cautions if any pass the validator (rare — most are blacklisted)
-    const workerValid = (workerCautions || []).map(l => String(l).trim()).filter(isValidCautionLine);
+    // 2) Use worker cautions directly — no blacklist, no fallback pool
+    const workerValid = (workerCautions || []).map(l => String(l).trim()).filter(l => l.length > 0);
     if (workerValid.length >= 1) return workerValid.slice(0, 2);
-
-    // 3) Fall back to pool — pick 1 line stable per reading
-    const z = (zone === 'HOLD_BACK' || zone === 'GO') ? zone : 'CAUTION';
-    const pool = (CAUTION_FALLBACK_POOLS[domain] && CAUTION_FALLBACK_POOLS[domain][z]) || [];
-    if (!pool.length) return ['Stay aware of the pattern this reading just named.'];
-    const hash = (window._currentReadingHash || 0);
-    return [pool[hash % pool.length]];
+    return [];
 }
 
 
@@ -1726,21 +1471,6 @@ async function streamReading(question, drawn, reversed) {
                         </div>`;
                         metricsReceived = true;
                         continue;
-                  } else if (parsed._type === 'locked') {
-    // Free user — show PRO unlock box
-    const proBox = document.getElementById('pro-unlock');
-    if (proBox) proBox.style.display = '';
-    metricsReceived = true;
-    continue;
-                    } else if (parsed._type === 'error') {
-                        document.getElementById('stream-content').innerHTML =
-                            `<div style="color:rgba(231,76,60,0.9);padding:20px;text-align:center;">
-                                <div style="font-size:1.2rem;margin-bottom:8px;">⚠️</div>
-                                <div>Something interrupted the reading. This is usually temporary — please try again in a moment.</div>
-                                <button onclick="goHome()" style="margin-top:14px;padding:8px 20px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:8px;cursor:pointer;">Try Again</button>
-                            </div>`;
-                        metricsReceived = true;
-                        continue;
                     } else if (parsed._type === 'dependency_note') {
                         // Layer 2: gentle dependency nudge — stash to append after reading.
                         window._dependencyNote = parsed.text;
@@ -2193,7 +1923,7 @@ function renderDecisionLayersEN(layers) {
             if (window._aiClosing && typeof window._aiClosing === 'string') {
                 const trimmed = window._aiClosing.trim().replace(/^[•\-*]\s*/, '');
                 const wc = trimmed.split(/\s+/).length;
-                if (wc >= 8 && wc <= 30 && !GENERIC_GUIDE_BLACKLIST.some(rx => rx.test(trimmed))) {
+                if (wc >= 8 && wc <= 30) {
                     oneLine = trimmed;
                 }
             }
