@@ -1104,6 +1104,16 @@ const PAYMENT_PLANS = {
         stripe_price_id: 'price_TODO_YEARLY',
         featured:        true,
     },
+    dev: {
+        id:              'dev',
+        name:            'Dev',
+        desc:            'Unlimited — development only',
+        price_cents:     0,
+        currency:        'USD',
+        duration_ms:     365 * 24 * 60 * 60 * 1000,
+        stripe_price_id: 'price_DEV_ONLY',
+        featured:        false,
+    },
 };
 
 // ══════════════════════════════════════════════════════════════════
