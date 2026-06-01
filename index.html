@@ -1602,6 +1602,20 @@ function onStreamComplete(fullText) {
         renderDecisionLayersEN(SERVER_METRICS.layers);
         const proBox = document.getElementById('pro-unlock');
         if (proBox) proBox.style.display = 'none';
+    } else if (isPremium() && !SERVER_METRICS?.layers) {
+        // Metrics may arrive slightly after done — retry once after short delay
+        setTimeout(() => {
+            if (SERVER_METRICS?.layers) {
+                renderDecisionLayersEN(SERVER_METRICS.layers);
+                const mb = document.getElementById('metrics-box');
+                if (mb && SERVER_METRICS) {
+                    const mHtml = renderMetricsEN(SERVER_METRICS);
+                    if (mHtml) { mb.innerHTML = mHtml; mb.style.setProperty('display','block','important'); }
+                }
+            }
+            const proBox = document.getElementById('pro-unlock');
+            if (proBox) proBox.style.display = 'none';
+        }, 300);
     } else if (!isPremium()) {
         const proBox = document.getElementById('pro-unlock');
         if (proBox) proBox.style.display = '';
