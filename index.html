@@ -1486,7 +1486,11 @@ async function streamReading(question, drawn, reversed) {
                         if (window._oracleRotator) { clearInterval(window._oracleRotator); window._oracleRotator = null; }
                         if (fullText === '') contentEl.innerHTML = '';
                         fullText += parsed.text;
-                        contentEl.innerHTML = renderStreamText(fullText);
+                        try {
+                            contentEl.innerHTML = renderStreamText(fullText);
+                        } catch (renderErr) {
+                            contentEl.innerHTML = fullText.replace(/\n/g, '<br>');
+                        }
                     } else if (parsed._type === 'done') {
                         onStreamComplete(fullText);
                     }
