@@ -2044,7 +2044,7 @@ NO REPETITION (critical — this is the most common failure):
 - The Position, Signal, Risk, Guiding Principles, and Deep Interpretation must EACH add NEW information — not restate the body. If the body already said "they pull back", the Risk must NOT also say "don't push them" and the Signal must NOT also say "they withdraw". Every section earns its place by saying something the others did not.
 - Before finishing, check: am I saying the same thing in four different boxes? If yes, change three of them to cover different angles (one on action, one on timing, one on what to watch, one on what it means).
 
-PARAGRAPH STRUCTURE: Three SEPARATE paragraphs with blank lines between. Never merge into one block.
+PARAGRAPH STRUCTURE: Three SEPARATE paragraphs. You MUST separate each paragraph with a literal blank line (two newline characters, i.e. press Enter twice). This is MANDATORY for correct display — without the blank lines the entire reading renders as one unreadable block. Output format example: "First paragraph text.\n\nSecond paragraph text.\n\nThird paragraph text." Never merge the three paragraphs into one block, and never use a single newline where a blank line is required.
 
 REQUIRED: Read the SITUATION (relationship, context, dynamics), not only the querent's inner journey. Sound like a real human reader, not a therapist's script. End with a grounded observation, not a benediction.
 
@@ -4120,9 +4120,6 @@ export default {
               `Write the reading now.`;
 
             const apiKey = env.GEMINI_API_KEY;
-            // Log prompt sizes to detect token bloat
-            console.log(`[ZEUS] systemPrompt: ${systemPrompt.length} chars, userPrompt: ${userPrompt.length} chars, total: ${systemPrompt.length + userPrompt.length} chars`);
-            console.log('userPrompt:', userPrompt);
             if (!apiKey) {
               send({ _type: 'token', text: metrics.finalOracle || 'Reading energy computed; AI narration unavailable (no API key).' });
               send({ _type: 'done' });
@@ -4174,17 +4171,11 @@ export default {
                 try {
                   const json = JSON.parse(payload);
                   const candidate = json?.candidates?.[0];
-                  if (!candidate) console.log('NO_CANDIDATE:', JSON.stringify(json).slice(0,1000));
-                  if (candidate) console.log('CANDIDATE_KEYS:', Object.keys(candidate).join(','));
                   const parts = candidate?.content?.parts || [];
-                  if (parts.length === 0 && candidate) console.log('EMPTY_CANDIDATE:', JSON.stringify(candidate).slice(0,1000));
-                  const finishReason = candidate?.finishReason;
-                  if (finishReason && finishReason !== 'STOP') console.log('Gemini finishReason:', finishReason);
                   for (const part of parts) {
                     if (part.text) {
                       const safeText = domain === 'stock'
                         ? sanitizeWealthText(part.text) : part.text;
-                      console.log('token chunk:', safeText.length, 'chars');
                       send({ _type: 'token', text: safeText });
                     }
                   }
