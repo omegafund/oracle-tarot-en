@@ -2044,7 +2044,7 @@ NO REPETITION (critical — this is the most common failure):
 - The Position, Signal, Risk, Guiding Principles, and Deep Interpretation must EACH add NEW information — not restate the body. If the body already said "they pull back", the Risk must NOT also say "don't push them" and the Signal must NOT also say "they withdraw". Every section earns its place by saying something the others did not.
 - Before finishing, check: am I saying the same thing in four different boxes? If yes, change three of them to cover different angles (one on action, one on timing, one on what to watch, one on what it means).
 
-PARAGRAPH STRUCTURE: Three SEPARATE paragraphs. You MUST separate each paragraph with a literal blank line (two newline characters, i.e. press Enter twice). This is MANDATORY for correct display — without the blank lines the entire reading renders as one unreadable block. Output format example: "First paragraph text.\n\nSecond paragraph text.\n\nThird paragraph text." Never merge the three paragraphs into one block, and never use a single newline where a blank line is required.
+PARAGRAPH STRUCTURE: Three SEPARATE paragraphs with blank lines between. Never merge into one block.
 
 REQUIRED: Read the SITUATION (relationship, context, dynamics), not only the querent's inner journey. Sound like a real human reader, not a therapist's script. End with a grounded observation, not a benediction.
 
@@ -2245,17 +2245,17 @@ function buildFortuneMetrics({ totalScore, riskScore, cleanCards, reversedFlags,
     "The picture seems to be still developing beneath the surface."
   ]);
   const reflectionTone = pickVariant([...cleanCards].reverse(), posBias === 'GO' ? [
-    "The opening here rewards steady effort, not a single bold leap.",
-    "What you do consistently over the next stretch matters more than any one move.",
-    "Small, repeated actions are what carry this forward."
+    "More than an outcome, this speaks to trusting your own readiness.",
+    "This points less to what happens next and more to your alignment with it.",
+    "At heart, this is about meeting the moment as yourself."
   ] : posBias === 'HOLD_BACK' ? [
-    "Hold steady and tend to what is already in front of you before reaching further.",
-    "The practical move now is to maintain, not expand.",
-    "Keep the routine intact — this is a stretch for consolidating, not pushing."
+    "More than a verdict, this speaks to protecting your own steadiness.",
+    "This points less to the situation and more to your relationship with patience.",
+    "At heart, this is an invitation to tend to yourself first."
   ] : [
-    "Watch how the next week or two actually unfolds before committing.",
-    "One more piece of concrete information will clear this up.",
-    "Let the situation show its hand through events, not guesswork."
+    "More than an answer, this speaks to sitting honestly with the uncertainty.",
+    "This points less to a direction and more to listening inward.",
+    "At heart, this is about clarity you give yourself, not one you're handed."
   ]);
 
   const finalOracle = isDecision
@@ -2467,10 +2467,10 @@ function runWealthEngine(ctx) {
   const futLabel = futRev ? `${futCard} (reversed)` : futCard;
 
   const closing = energyKey === "EXPANSIVE" || energyKey === "OPENING"
-    ? "There is room to build here — keep the steady habits that got you this far, and let the momentum compound."
+    ? "There is room for growth here — stay grounded in what genuinely matters to you, and let it unfold."
     : energyKey === "CONTRACTING" || energyKey === "GUARDED"
-      ? "This is a season for rebuilding the basics — consistent, disciplined effort over reaching for more."
-      : "Clarify what is worth your sustained effort before committing your energy in any direction.";
+      ? "This may be a season for restoring your inner sense of enough, rather than reaching outward."
+      : "Let your own sense of value settle before you lean in any direction.";
 
   const _posE = (energyKey === "EXPANSIVE" || energyKey === "OPENING");
   const _negE = (energyKey === "CONTRACTING" || energyKey === "GUARDED");
@@ -2488,17 +2488,17 @@ function runWealthEngine(ctx) {
     "Your sense of value seems to be still finding its center."
   ]);
   const valReflection = pickVariant([...cleanCards].reverse(), _posE ? [
-    "What you build now rests on consistency more than any single breakthrough.",
-    "Steady habits are doing more here than any burst of effort.",
-    "The momentum holds as long as the daily practice does."
+    "More than any outcome, this speaks to trusting that you are enough.",
+    "This points less to gain and more to alignment with what you value.",
+    "At heart, this is about worth you carry, not worth you chase."
   ] : _negE ? [
-    "Rebuild the basics first — the steady routines that got loosened.",
-    "This is a stretch for consolidating discipline, not chasing more.",
-    "Tend to the foundation: small, repeated effort over reach."
+    "More than circumstances, this speaks to restoring your inner sense of enough.",
+    "This points less to lack and more to where your energy wants tending.",
+    "At heart, this is an invitation to reconnect with what truly matters to you."
   ] : [
-    "Clarify what is actually worth your sustained effort, then commit to it.",
-    "The next gain comes from disciplined cultivation, not a sudden move.",
-    "Let consistent practice define the direction here."
+    "More than a direction, this speaks to clarifying what you actually value.",
+    "This points less to a goal and more to listening inward.",
+    "At heart, this is about meaning you define for yourself."
   ]);
   const finalOracle = `${flowSummary} ${valObservation} ${futLabel} suggests ${futFlavor}. ${closing} ${valReflection} This is a symbolic reflection on self-worth and intention — not financial advice.`;
 
@@ -2823,20 +2823,20 @@ function buildLoveMetrics({ totalScore, riskScore, cleanCards, reversedFlags, pr
     "The connection seems to be still finding its words."
   ]);
   const loveReflection = pickVariant([...cleanCards].reverse(), posBias === 'GO' ? [
-    "Watch what the other person does next, not only what they say.",
-    "The next move that matters is a direct, honest one — yours or theirs.",
-    "Where this goes depends on whether both people act, not just feel."
+    "More than what they do next, this speaks to meeting them openly as yourself.",
+    "This points less to a guarantee and more to your own readiness to connect.",
+    "At heart, this is about honesty — yours first."
   ] : posBias === 'HOLD_BACK' ? [
-    "Notice whether their actions match their words before you read more into it.",
-    "What happens next depends on what each person actually does, not what they intend.",
-    "The pattern here is set by behavior — watch the actions, not the promises."
+    "More than their choices, this speaks to protecting your own heart.",
+    "This points less to the outcome and more to your steadiness within it.",
+    "At heart, this is an invitation to tend to yourself first."
   ] : [
-    "Watch what each person does over the next stretch — that sets the direction.",
-    "Clarity comes from what gets said and done plainly, not from waiting it out.",
-    "Where this lands depends on whether someone names it directly."
+    "More than an answer, this speaks to letting the truth surface gently.",
+    "This points less to certainty and more to honest, unhurried attention.",
+    "At heart, this is about clarity you both grow into, not one you force."
   ]);
   const finalOracle = isReflection
-    ? `${flowSummary} ${loveObservation} What keeps this alive is less about closure and more about what went unfinished between you — a need that was never directly met. ${futLabel} points toward ${futFlavor}. ${loveReflection}`
+    ? `${flowSummary} ${loveObservation} What lingers here points less to them and more to something within you still asking to be understood. ${futLabel} points toward ${futFlavor}. The deeper invitation is to tend to your own heart and what it learned. ${loveReflection}`
     : `${flowSummary} ${loveObservation} The bond reads as ${bondText}. ${futLabel} points toward ${futFlavor}. ${closing} ${loveReflection}`;
 
   const criticalInterpretation = buildCriticalInterpretation(cleanCards, revFlags, "love", "buy");
@@ -3630,7 +3630,6 @@ function buildSystemPromptEN(domain, subjectName, relationshipState, loveSubtype
     `Speak in clear, vivid, compressed English — like an experienced tarot reader describing what is unfolding around the querent, not a therapist analyzing their psychology. ` +
     `Be specific and grounded, never vague or decorative. ` +
     `Focus on observable behaviors, actions, patterns, and likely outcomes. Do NOT explain behavior through psychological diagnosis — describe what people DO, not what they FEEL or FEAR inside. ` +
-    `Ground every reading in concrete specifics: what someone does, says, avoids, chooses, delays, or changes — not abstract emotional states. When you name a feeling, tie it to a visible action or event. ` +
     `Interpret the cards as concrete situations first. Only discuss emotions when they directly explain a visible situation. ` +
     `Prefer concrete interpretation over emotional atmosphere. ` +
     `Each paragraph should reveal something new about the person's situation rather than repeating the same feeling in different words. ` +
@@ -3652,7 +3651,6 @@ function buildSystemPromptEN(domain, subjectName, relationshipState, loveSubtype
       `Do NOT turn this into a psychology or self-worth reading. Do NOT discuss self-worth, emotional security, inner value, or personal healing. ` +
       `Focus on symbolic momentum and practical conditions — what is building, what is stalling, what timing favors — NOT on the person's inner emotional state. ` +
       `Describe observable conditions: is effort paying off, is momentum building or fading, is the timing ripe or early, what is steady and what is shaky. ` +
-      `Anchor the reading in the practical levers of building something: habits, discipline, consistency, the steady cultivation of skill and resources over time. Show what daily practice is supporting or undermining the momentum — not just an inner feeling of worth. ` +
       `Each seed has an "energy" (the strength) and a "shadow" (the risk). Give the energy at least as much weight as the shadow — do NOT spend more than one paragraph on shadow/warning. Do not let the whole reading become one repeated caution. ` +
       `Offer reflection with soft direction, never commands. ` +
       `Always remind the reader this is symbolic guidance for self-reflection, and that real financial decisions should be made with qualified professionals. ` +
@@ -3662,25 +3660,18 @@ function buildSystemPromptEN(domain, subjectName, relationshipState, loveSubtype
     const directive = LOVE_DIRECTIVE[loveSubtype] || LOVE_DIRECTIVE.general;
     return baseInstruction +
       `This is a relationship/love reading. ` +
-      `Interpret the RELATIONSHIP ITSELF — not the cards one by one. ` +
-      `Do NOT explain cards sequentially. Write as if you are describing a real relationship between two real people. ` +
-      `Focus on: what the other person likely feels or wants, what is blocking the connection, what is changing in the dynamic, whether momentum is growing or fading. ` +
+      `CARD-FIRST RULE: Read what each card actually shows FIRST. The cards drive the reading — do not override them with a generic psychology narrative. If the cards show timing, chemistry, or external events, read THAT — do not convert it into a lesson about the querent's worth or validation. ` +
+      `A love reading should PRIMARILY focus on: (1) the other person's state and behavior, (2) the relationship dynamic between the two people, (3) the likely direction of the connection. ` +
+      `Personal growth, self-worth, healing, validation, attachment, or inner lessons may ONLY be discussed if a card directly and strongly supports it — and must NEVER become the dominant theme. ` +
+      `Interpret the RELATIONSHIP ITSELF — not the cards one by one. Write as if describing a real relationship between two real people. ` +
       `Describe what each person is actually doing, avoiding, or pursuing — not just how they feel inside. ` +
-      `Address attraction, avoidance, mixed signals, communication patterns, and relationship dynamics. ` +
-      `Speak with directness and insight, prioritizing clarity over comfort. ` +
-      `Be honest about red flags (obsession, instability) without being harsh. ` +
-      `Do NOT default to emotional healing, inner growth, or authentic connection framing. ` +
-      `IMPORTANT: Describe behavior, patterns, and relationship dynamics — NOT psychology. ` +
-      `Do NOT use: attachment style, fear of commitment, trauma response, inner child, healing journey, emotional processing, psychological wounds, internal resistance, emotional motives, unspoken anxieties, immaturity. ` +
-      `PREFER: withdraws, hesitates, avoids definition, keeps distance, moves closer, opens up, stays inconsistent, shows effort, holds back, steps away when pressed, commits when comfortable. ` +
-      `Interpret cards through observable relationship behavior — not psychological diagnosis. ` +
-      `Do NOT act as a therapist, counselor, or emotional wellbeing coach. Do NOT focus on healing, wellbeing, or inner emotional processing. Interpret observable dynamics: timing, initiative, avoidance, communication, distance, closeness, and likely trajectory. ` +
-      `Do NOT use filler linking phrases that connect cards by repetition, such as "a similar pattern appears again here", "this echoes", "once more we see". Each card describes a DIFFERENT facet of the relationship — never the same point restated. ` +
-      `Do NOT end every reading on "what is unspoken / hidden / unsaid / avoided". Vary the ending: sometimes a concrete next event, sometimes what one person will likely do, sometimes a clear directional read. Avoid the habit of closing on ambiguity. ` +
-      `CORE FOCUS — build the entire reading around four things: what each person DOES, what each person AVOIDS, how COMMUNICATION behaves between them, and what CHANGES next. ` +
-      `Name at least one concrete action or behavior for EACH person (the querent and the other) — for example "keeps replying late", "pulls back when plans get specific", "reaches out only when lonely". Not abstract feelings. ` +
-      `Do NOT center the reading on the reader's healing, self-worth, emotional journey, or inner growth. The reading is about the relationship and the two people in it, not a self-help session. ` +
-      `End by stating where the relationship is HEADING based on both people's behavior — not on the reader's inner work. ` +
+      `Address attraction, avoidance, mixed signals, communication, timing, and relationship dynamics. ` +
+      `Speak with directness, prioritizing clarity over comfort. Be honest about red flags without being harsh. ` +
+      `Do NOT act as a therapist or wellbeing coach. PREFER observable behavior: withdraws, hesitates, avoids definition, keeps distance, moves closer, opens up, shows effort, holds back, commits when comfortable. ` +
+      `Do NOT use: attachment style, fear of commitment, trauma response, inner child, healing journey, emotional processing, psychological wounds, internal resistance, unspoken anxieties, immaturity. ` +
+      `Do NOT use filler linking phrases like "a similar pattern appears again here". Each card describes a DIFFERENT facet of the relationship. ` +
+      `Do NOT end every reading on "what is unspoken / hidden / avoided". Vary the ending: a concrete next event, what one person will likely do, or a clear directional read. ` +
+      `SELF-CHECK before finalizing: Count how many paragraphs center on (a) the querent's own inner state vs (b) the other person and the relationship. If querent-focused content exceeds the combined focus on the other person and the relationship, REWRITE those paragraphs to describe the other person and the connection instead. ` +
       `This is reflective guidance, not a guarantee — let the reader decide for themselves. ` +
       `\n\nQUESTION TYPE — tailor the reading accordingly: ${directive} ` +
       relationshipEngineInstruction;
@@ -3692,7 +3683,6 @@ function buildSystemPromptEN(domain, subjectName, relationshipState, loveSubtype
       `Always cover three things concretely: (1) what SUPPORTS the option or path, (2) what CHALLENGES or works against it, (3) the likely OUTCOME if the current course continues. ` +
       `Avoid psychological interpretation — do not analyze the querent's inner state, fears, or growth. Discuss the practical situation and what each direction favors. ` +
       `Give grounded, practical guidance. ` +
-      `Do NOT speak like a self-help book or a life coach. No "trust yourself", "follow your truth", "growth opportunity", "lessons to learn" framing. Talk about the actual decision and its concrete trade-offs, like a clear-eyed advisor. ` +
       `ALWAYS end with a directional lean. Do NOT leave the reading completely unresolved. ` +
       `Examples: "The energy leans toward waiting." / "The energy leans toward moving forward." / "The energy leans toward letting this pass." ` +
       `The reader came to understand which direction has more energy behind it — give them that. ` +
@@ -3710,8 +3700,6 @@ function buildSystemPromptEN(domain, subjectName, relationshipState, loveSubtype
     `For each card, describe people, situations, opportunities, conflicts, delays, decisions, and environmental changes — BEFORE discussing emotions. ` +
     `Describe what is happening around the person — not only what is happening inside them. ` +
     `The reading should feel like an experienced tarot reader describing what is unfolding around the querent — not a therapist analyzing their psychology. ` +
-    `Do NOT speak like a motivational speaker or a TED talk. No grand inspirational sweep, no "the universe is guiding you", no uplift-for-its-own-sake. Plain, grounded observation only. ` +
-    `Where relevant, focus on the practical levers of a life: habits, choices, effort, discipline, stewardship, how time and attention are allocated, and long-term cultivation — what the person is building day by day. ` +
     `Weave in the moon phase and numerology where natural. ` +
     `Offer guidance that helps the reader decide for themselves. ` +
     relationshipEngineInstruction;
@@ -4120,6 +4108,9 @@ export default {
               `Write the reading now.`;
 
             const apiKey = env.GEMINI_API_KEY;
+            // Log prompt sizes to detect token bloat
+            console.log(`[ZEUS] systemPrompt: ${systemPrompt.length} chars, userPrompt: ${userPrompt.length} chars, total: ${systemPrompt.length + userPrompt.length} chars`);
+            console.log('userPrompt:', userPrompt);
             if (!apiKey) {
               send({ _type: 'token', text: metrics.finalOracle || 'Reading energy computed; AI narration unavailable (no API key).' });
               send({ _type: 'done' });
@@ -4128,7 +4119,7 @@ export default {
             }
 
             const geminiUrl =
-              `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
+              `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
             const gemResp = await fetch(geminiUrl, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -4171,11 +4162,17 @@ export default {
                 try {
                   const json = JSON.parse(payload);
                   const candidate = json?.candidates?.[0];
+                  if (!candidate) console.log('NO_CANDIDATE:', JSON.stringify(json).slice(0,1000));
+                  if (candidate) console.log('CANDIDATE_KEYS:', Object.keys(candidate).join(','));
                   const parts = candidate?.content?.parts || [];
+                  if (parts.length === 0 && candidate) console.log('EMPTY_CANDIDATE:', JSON.stringify(candidate).slice(0,1000));
+                  const finishReason = candidate?.finishReason;
+                  if (finishReason && finishReason !== 'STOP') console.log('Gemini finishReason:', finishReason);
                   for (const part of parts) {
                     if (part.text) {
                       const safeText = domain === 'stock'
                         ? sanitizeWealthText(part.text) : part.text;
+                      console.log('token chunk:', safeText.length, 'chars');
                       send({ _type: 'token', text: safeText });
                     }
                   }
