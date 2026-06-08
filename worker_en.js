@@ -4124,10 +4124,7 @@ export default {
 
             const geminiUrl =
               `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
-            const gemResp = await fetch(geminiUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
+            const geminiBody = JSON.stringify({
                 system_instruction: { parts: [{ text: systemPrompt }] },
                 contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
                 generationConfig: { temperature: 0.85, maxOutputTokens: 8192 },
@@ -4137,11 +4134,25 @@ export default {
                   { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
                   { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
                 ]
-              })
-            });
+              });
+            // Retry on transient Gemini errors (503 overload, 429 rate, 500 internal).
+            let gemResp;
+            const RETRYABLE = [429, 500, 502, 503, 504];
+            for (let attempt = 0; attempt < 3; attempt++) {
+              gemResp = await fetch(geminiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: geminiBody
+              });
+              if (gemResp.ok && gemResp.body) break;
+              if (!RETRYABLE.includes(gemResp.status) || attempt === 2) break;
+              console.log('Gemini retry:', gemResp.status, 'attempt', attempt + 1);
+              await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+            }
 
             if (!gemResp.ok || !gemResp.body) {
               const errText = await gemResp.text().catch(() => '');
+              console.log('Gemini status:', gemResp.status, 'body:', errText.slice(0, 200));
               send({ _type: 'token', text: metrics.finalOracle || 'AI narration unavailable.' });
               send({ _type: 'error', message: `Gemini error ${gemResp.status}: ${errText.slice(0, 200)}` });
               send({ _type: 'done' });
