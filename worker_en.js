@@ -3618,8 +3618,25 @@ const LOVE_DIRECTIVE = {
   general:       `This is a general love / relationship question. Read the emotional arc between the querent and the other person with warmth, addressing connection, communication, and where the energy is moving.`
 };
 
-function buildSystemPromptEN(domain, subjectName, relationshipState, loveSubtype, oracleStyle) {
+// Universal self-reflection detector — works across ALL domains (love, fortune, stock, decision).
+// Real users ask introspective "why do I / am I / what keeps me" questions far more than
+// formulaic ones. These need a querent-centered but CONCRETE answer, not generic self-help.
+function isSelfReflectionQuestion(prompt) {
+  const p = (prompt || '').toLowerCase();
+  return /\b(why (do|am|can'?t|does) i|why does .{0,30} affect me|am i (ignoring|seeking|being|making|seeing|seeing this|avoiding|chasing|settling|sabotaging)|what (keeps|makes|holds) me|what (emotional |subconscious |hidden |inner )?(wound|belief|fear|pattern|habit)\b|what .{0,30}(sabotage|sabotages|holds me back|limits me|limits my)|what happens if i (stop|keep|leave|stay)|do i (really|actually|truly)|am i .{0,30}(or|from) )\b/.test(p);
+}
+
+// Concrete-reflection guidance appended for self-reflection questions in any domain.
+const REFLECTION_GUIDANCE =
+  ` SELF-REFLECTION MODE: This is an introspective question about the querent's own pattern, fear, or behavior — not about another person or external event. Center the querent. ` +
+  `But stay CONCRETE: name the actual pattern, the specific situations where it shows up, and what it looks like in real behavior. ` +
+  `Do NOT answer with generic self-help ("honor your worth", "trust the journey", "true security comes from within", "your subconscious belief is..."). ` +
+  `If the question names a "subconscious belief" or "emotional wound", do NOT lecture about psychology — instead describe the concrete pattern the cards show: what the querent tends to DO, when, and what it costs them. ` +
+  `Use the cards as a mirror showing a real, recognizable pattern of action — not a therapy diagnosis. End with one grounded thing to watch for or try, not an abstract affirmation. `;
+
+function buildSystemPromptEN(domain, subjectName, relationshipState, loveSubtype, oracleStyle, prompt) {
   const subject = subjectName || 'this asset';
+  const isReflectionQ = isSelfReflectionQuestion(prompt);
   const relationshipEngineInstruction = relationshipState
     ? `Relationship context (if relevant): type=${relationshipState.relationshipType}, emotional intensity=${relationshipState.emotionalIntensity}.`
     : '';
@@ -3648,8 +3665,10 @@ function buildSystemPromptEN(domain, subjectName, relationshipState, loveSubtype
       `It is NOT financial or investment advice. Do NOT name or evaluate any specific stock, crypto, ticker, or security. ` +
       `Do NOT give buy/sell/hold instructions, price targets, entry/exit points, percentages, or guarantees. ` +
       `You MAY discuss: work, effort, results, opportunity, timing, confidence, preparedness, momentum, stability, and risk. ` +
-      `Do NOT turn this into a psychology or self-worth reading. Do NOT discuss self-worth, emotional security, inner value, or personal healing. ` +
-      `Focus on symbolic momentum and practical conditions — what is building, what is stalling, what timing favors — NOT on the person's inner emotional state. ` +
+      (isReflectionQ
+        ? `This question is introspective (e.g. "am I acting from fear or strategy", "what habit sabotages me", "do I chase validation"). You MAY address the querent's decision-making pattern, hesitation, fear-vs-strategy, or what quietly undermines their progress — that is what they asked. But describe it as a CONCRETE behavioral pattern (what they tend to do, when, and the cost), NOT as abstract psychology or a "subconscious belief" lecture. ` + REFLECTION_GUIDANCE
+        : `Do NOT turn this into a psychology or self-worth reading. Do NOT discuss self-worth, emotional security, inner value, or personal healing. ` +
+          `Focus on symbolic momentum and practical conditions — what is building, what is stalling, what timing favors — NOT on the person's inner emotional state. `) +
       `Describe observable conditions: is effort paying off, is momentum building or fading, is the timing ripe or early, what is steady and what is shaky. ` +
       `Each seed has an "energy" (the strength) and a "shadow" (the risk). Give the energy at least as much weight as the shadow — do NOT spend more than one paragraph on shadow/warning. Do not let the whole reading become one repeated caution. ` +
       `Offer reflection with soft direction, never commands. ` +
@@ -3694,7 +3713,9 @@ function buildSystemPromptEN(domain, subjectName, relationshipState, loveSubtype
       `This is a decision reading — a choice the querent is weighing (a job, a move, a commitment, a relationship). ` +
       `Interpret the three cards (past / present / future) as the trajectory of the decision. ` +
       `Always cover three things concretely: (1) what SUPPORTS the option or path, (2) what CHALLENGES or works against it, (3) the likely OUTCOME if the current course continues. ` +
-      `Avoid psychological interpretation — do not analyze the querent's inner state, fears, or growth. Discuss the practical situation and what each direction favors. ` +
+      (isReflectionQ
+        ? `This question is introspective (e.g. "why do I hesitate", "am I deciding from fear or strategy"). You MAY address the querent's own decision pattern — but as a CONCRETE behavioral pattern (what they do, when, the cost), NOT abstract psychology.` + REFLECTION_GUIDANCE
+        : `Avoid psychological interpretation — do not analyze the querent's inner state, fears, or growth. Discuss the practical situation and what each direction favors. `) +
       `Give grounded, practical guidance. ` +
       `ALWAYS end with a directional lean. Do NOT leave the reading completely unresolved. ` +
       `Examples: "The energy leans toward waiting." / "The energy leans toward moving forward." / "The energy leans toward letting this pass." ` +
@@ -3707,12 +3728,14 @@ function buildSystemPromptEN(domain, subjectName, relationshipState, loveSubtype
     `Avoid finance vocabulary entirely: do NOT use words like "financial", "wealth", "money", "investment", "resources" (as in money), "ventures", "abundance" (as wealth). ` +
     `Interpret PENTACLES primarily as energy, stability, embodiment, daily life rhythm, craftsmanship, or practical grounding — NOT as money or material — unless the question is explicitly financial. ` +
     `PRIORITY — spend most of the reading explaining the user's real-life situation, not explaining the cards. Do NOT spend more than one paragraph on card imagery. ` +
-    `Always answer these three questions clearly: (1) what is actually happening in this person's life right now, (2) why it is happening, (3) what the person is likely to experience next. ` +
-    `Focus on: events, circumstances, daily life, career rhythm, timing, practical obstacles, external influences, and people around the querent. ` +
-    `Do NOT discuss: inner landscape, inner process, emotional center, deeper knowing, personal growth, healing journey, self-discovery, or inner transformation. ` +
-    `For each card, describe people, situations, opportunities, conflicts, delays, decisions, and environmental changes — BEFORE discussing emotions. ` +
-    `Describe what is happening around the person — not only what is happening inside them. ` +
-    `The reading should feel like an experienced tarot reader describing what is unfolding around the querent — not a therapist analyzing their psychology. ` +
+    (isReflectionQ
+      ? `This question is introspective (e.g. "why do I keep doing X", "what pattern holds me back"). You MAY center the querent's own pattern — but describe it as CONCRETE recognizable behavior (what they do, when, the cost), NOT abstract inner-work language.` + REFLECTION_GUIDANCE
+      : `Always answer these three questions clearly: (1) what is actually happening in this person's life right now, (2) why it is happening, (3) what the person is likely to experience next. ` +
+        `Focus on: events, circumstances, daily life, career rhythm, timing, practical obstacles, external influences, and people around the querent. ` +
+        `Do NOT discuss: inner landscape, inner process, emotional center, deeper knowing, personal growth, healing journey, self-discovery, or inner transformation. ` +
+        `For each card, describe people, situations, opportunities, conflicts, delays, decisions, and environmental changes — BEFORE discussing emotions. ` +
+        `Describe what is happening around the person — not only what is happening inside them. `) +
+    `The reading should feel like an experienced tarot reader describing what is unfolding — not a therapist analyzing psychology. ` +
     `Weave in the moon phase and numerology where natural. ` +
     `Offer guidance that helps the reader decide for themselves. ` +
     relationshipEngineInstruction;
@@ -4073,7 +4096,7 @@ export default {
             metrics.emotion = _emotion;
             metrics.lens = effectiveLens;            // expose to client (now reflects whether lens actually applied)
             metrics.gravityTier = gravityProfile.tier;
-            const systemPrompt = buildSystemPromptEN(domain, subject, relationshipState, loveSubtype, oracleStyle)
+            const systemPrompt = buildSystemPromptEN(domain, subject, relationshipState, loveSubtype, oracleStyle, prompt)
                                + `\n${LENS_NATIVE_PRIORITY}`
                                + (lensPromptBlock ? `\n\n${lensPromptBlock}` : '')
                                + gravityPromptBlock
