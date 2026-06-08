@@ -1052,25 +1052,12 @@ function restoreUserState() {
 // ══════════════════════════════════════════════════════════════════
 // ══════════════════════════════════════════════════════════════════
 function isPremium() {
-    // Primary: state flag
-    if (STATE.user.isPremium) {
-        if (STATE.user.expiresAt && Date.now() > STATE.user.expiresAt) {
-            lockPremium();
-            return false;
-        }
-        return true;
+    if (!STATE.user.isPremium) return false;
+    if (STATE.user.expiresAt && Date.now() > STATE.user.expiresAt) {
+        lockPremium();
+        return false;
     }
-    // Fallback: a valid token in localStorage (covers restore-state gaps)
-    const tok = STATE.user.sessionToken || localStorage.getItem('zeus_token');
-    if (tok) {
-        try {
-            const payload = JSON.parse(atob(tok.split('.')[0].replace(/-/g, '+').replace(/_/g, '/')));
-            if (payload.exp && Date.now() < payload.exp * 1000) {
-                return true;
-            }
-        } catch (_) {}
-    }
-    return false;
+    return true;
 }
 
 function requirePremium(reason = 'this feature') {
