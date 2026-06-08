@@ -3282,7 +3282,7 @@ async function handleZeusShieldEN(request, env, jti, question) {
     const guestKey = `active_en:guest:${fp}:${ip}`;
     const guestActive = await kv.get(guestKey);
     if (guestActive === 'true') return shieldResponse('CONCURRENT', 429);
-    await kv.put(guestKey, 'true', { expirationTtl: 90 });
+    await kv.put(guestKey, 'true', { expirationTtl: 60 });
     return { success: true, isResponse: false, keyBase: null, usageKey: null, globalKey: null, concurrentKey: guestKey };
   }
 
@@ -3294,7 +3294,7 @@ async function handleZeusShieldEN(request, env, jti, question) {
   const concurrentKey = `active_en:${keyBase}`;
   const active = await kv.get(concurrentKey);
   if (active === 'true') return shieldResponse('CONCURRENT', 429);
-  await kv.put(concurrentKey, 'true', { expirationTtl: 90 }); // min 60s required by Cloudflare KV
+  await kv.put(concurrentKey, 'true', { expirationTtl: 60 }); // min 60s required by Cloudflare KV
 
   try {
     // Adaptive cooldown removed — daily limits (checkDailyLimit) already control
@@ -4186,6 +4186,8 @@ export default {
             if (!gemResp.ok || !gemResp.body) {
               const errText = await gemResp.text().catch(() => '');
               console.log('Gemini status:', gemResp.status, 'body:', errText.slice(0, 200));
+              // Release concurrency lock immediately (don't rely on finally during stream close)
+              try { const _kv = getKV(env); if (_kv && _shieldData && _shieldData.concurrentKey) await _kv.delete(_shieldData.concurrentKey); } catch (_) {}
               send({ _type: 'token', text: metrics.finalOracle || 'AI narration unavailable.' });
               send({ _type: 'error', message: `Gemini error ${gemResp.status}: ${errText.slice(0, 200)}` });
               send({ _type: 'done' });
