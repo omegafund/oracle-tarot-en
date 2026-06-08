@@ -3628,11 +3628,13 @@ function isSelfReflectionQuestion(prompt) {
 
 // Concrete-reflection guidance appended for self-reflection questions in any domain.
 const REFLECTION_GUIDANCE =
-  ` SELF-REFLECTION MODE: This is an introspective question about the querent's own pattern, fear, or behavior — not about another person or external event. Center the querent. ` +
-  `But stay CONCRETE: name the actual pattern, the specific situations where it shows up, and what it looks like in real behavior. ` +
-  `Do NOT answer with generic self-help ("honor your worth", "trust the journey", "true security comes from within", "your subconscious belief is..."). ` +
-  `If the question names a "subconscious belief" or "emotional wound", do NOT lecture about psychology — instead describe the concrete pattern the cards show: what the querent tends to DO, when, and what it costs them. ` +
-  `Use the cards as a mirror showing a real, recognizable pattern of action — not a therapy diagnosis. End with one grounded thing to watch for or try, not an abstract affirmation. `;
+  ` SELF-REFLECTION MODE: This is an introspective question about the querent's own pattern, fear, or behavior. Center the querent — but follow these rules strictly, or the reading becomes cheap coaching. ` +
+  `BEHAVIOR-FIRST ORDER (critical): Never name a psychological trait before describing the observable behavior. For each point: (1) what the person repeatedly DOES, (2) what consequence follows, (3) only THEN the underlying pattern. Behavior first, interpretation second. ` +
+  `BAD (forbidden): "You fear success." / "You seek validation." / "You have an attachment problem." — these are diagnoses with no behavior. ` +
+  `GOOD (required): "You delay decisions until you feel certain. Opportunities pass while you wait. The pattern isn't fear of success — it's treating uncertainty as danger." — behavior, then consequence, then pattern. ` +
+  `KEEP THE CARD STRUCTURE: Do NOT abandon the cards for a therapy monologue. Map the three cards: PAST card = how this pattern formed / an early version of it; PRESENT card = how the pattern operates right now (what they do today); FUTURE card = where it leads if it continues, AND what shifts if they change the one concrete behavior. ` +
+  `Do NOT use generic self-help ("honor your worth", "trust the journey", "true security comes from within", "your subconscious believes..."). ` +
+  `End with ONE concrete behavioral change to try — not an abstract affirmation. Example: "Start asking for a clear answer instead of reading into silence" — not "learn to value yourself". `;
 
 function buildSystemPromptEN(domain, subjectName, relationshipState, loveSubtype, oracleStyle, prompt) {
   const subject = subjectName || 'this asset';
@@ -3679,11 +3681,10 @@ function buildSystemPromptEN(domain, subjectName, relationshipState, loveSubtype
     const directive = LOVE_DIRECTIVE[loveSubtype] || LOVE_DIRECTIVE.general;
     const isReflection = loveSubtype === 'reflection';
     const focusRules = isReflection
-      ? // SELF-REFLECTION question ("why do I feel X", "how do I move on"): querent IS the subject.
-        `This is a SELF-REFLECTION question — the querent is asking about their OWN feelings or pattern, not about another person's behavior. Center the querent, but stay CONCRETE. ` +
-        `Read what the cards say about the real relationship dynamic that produced this feeling — what was unfinished, where a need went unmet, what was avoided — then connect it to the querent's situation. ` +
-        `Do NOT drift into generic self-help ("your healing journey", "honor your worth", "true security comes from within"). Name the actual relational situation behind the feeling. ` +
-        `Describe concrete patterns and events, not abstract inner states. Avoid the cadence of a therapy session. `
+      ? // SELF-REFLECTION question: querent IS the subject, but behavior-first + card structure.
+        `This is a SELF-REFLECTION question — the querent asks about their OWN pattern in love, not another person's behavior. ` +
+        `Map the cards to the pattern: PAST card = how this relationship pattern formed; PRESENT card = how it operates now (what they actually do — e.g. read hope into silence, ignore early signals); FUTURE card = where it leads if unchanged, and what shifts if they change one concrete behavior. ` +
+        REFLECTION_GUIDANCE
       : // RELATIONAL question: focus on the other person and the dynamic.
         `Every paragraph must answer the reader's real question: what is the OTHER person doing, where is the connection going, is it warming or cooling. ` +
         `SUBJECT RULE (most important for focus): Most sentences must have "the other person" or "the connection/relationship" as their grammatical subject. Sentences whose subject is "you/the querent" must be the MINORITY. Do NOT write "you are left to interpret the silence" or "your anxiety fills the void" — write "the other person has gone quiet" or "the silence is being left unexplained". Aim for roughly: other person 40%, the relationship 40%, the querent 20%. ` +
