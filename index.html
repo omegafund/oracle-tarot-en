@@ -1472,6 +1472,20 @@ async function streamReading(question, drawn, reversed) {
                         </div>`;
                         metricsReceived = true;
                         continue;
+                    } else if (parsed._type === 'locked') {
+                        // Free user — ensure PRO unlock box is visible.
+                        const proBox = document.getElementById('pro-unlock');
+                        if (proBox) proBox.style.display = '';
+                        metricsReceived = true;
+                    } else if (parsed._type === 'error') {
+                        if (window._oracleRotator) { clearInterval(window._oracleRotator); window._oracleRotator = null; }
+                        contentEl.innerHTML =
+                            `<div style="color:rgba(231,76,60,0.9);padding:20px;text-align:center;">
+                                <div style="font-size:1.2rem;margin-bottom:8px;">⚠️</div>
+                                <div>Something interrupted the reading. This is usually temporary — please try again in a moment.</div>
+                                <button onclick="goHome()" style="margin-top:14px;padding:8px 20px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:8px;cursor:pointer;">Try Again</button>
+                            </div>`;
+                        metricsReceived = true;
                     } else if (parsed._type === 'dependency_note') {
                         // Layer 2: gentle dependency nudge — stash to append after reading.
                         window._dependencyNote = parsed.text;
