@@ -3658,17 +3658,26 @@ function buildSystemPromptEN(domain, subjectName, relationshipState, loveSubtype
   }
   if (domain === 'love') {
     const directive = LOVE_DIRECTIVE[loveSubtype] || LOVE_DIRECTIVE.general;
+    const isReflection = loveSubtype === 'reflection';
+    const focusRules = isReflection
+      ? // SELF-REFLECTION question ("why do I feel X", "how do I move on"): querent IS the subject.
+        `This is a SELF-REFLECTION question — the querent is asking about their OWN feelings or pattern, not about another person's behavior. Center the querent, but stay CONCRETE. ` +
+        `Read what the cards say about the real relationship dynamic that produced this feeling — what was unfinished, where a need went unmet, what was avoided — then connect it to the querent's situation. ` +
+        `Do NOT drift into generic self-help ("your healing journey", "honor your worth", "true security comes from within"). Name the actual relational situation behind the feeling. ` +
+        `Describe concrete patterns and events, not abstract inner states. Avoid the cadence of a therapy session. `
+      : // RELATIONAL question: focus on the other person and the dynamic.
+        `Every paragraph must answer the reader's real question: what is the OTHER person doing, where is the connection going, is it warming or cooling. ` +
+        `SUBJECT RULE (most important for focus): Most sentences must have "the other person" or "the connection/relationship" as their grammatical subject. Sentences whose subject is "you/the querent" must be the MINORITY. Do NOT write "you are left to interpret the silence" or "your anxiety fills the void" — write "the other person has gone quiet" or "the silence is being left unexplained". Aim for roughly: other person 40%, the relationship 40%, the querent 20%. ` +
+        `Do NOT make the querent's anxiety, need for reassurance, fear of uncertainty, insecurity, longing, or doubt the primary subject. These may appear briefly but must NEVER dominate. The reader wants to know about the other person and the relationship — not to be psychoanalyzed. ` +
+        `PRESENT CARD — go deepest here: when a card shows a feeling or stance (e.g. calm, distance, interest), do NOT stop at naming it. Pin down WHAT KIND it is for this relationship: is the other person's calm a sign of real interest, comfortable friendship, mild fondness, or quiet certainty? The reader needs to know which. Name it. ` +
+        `FUTURE CARD — keep it about the RELATIONSHIP'S direction, not the querent's inner work. Even a reversed or blocked card should read as "what will happen between them / what one person will do", NOT "the querent needs to reflect / look inward / understand themselves". Never turn the future into a self-development lesson. ` +
+        `A love reading should PRIMARILY focus on: (1) the other person's state and behavior, (2) the dynamic between the two people, (3) the likely direction of the connection. `;
     return baseInstruction +
       `This is a relationship/love reading. ` +
       `CARD-TO-RELATIONSHIP RULE (most important): For EACH card, do two things in one breath — (1) read what the card shows, then (2) immediately translate it into what is happening in THIS relationship. Never stop at the card's textbook meaning. A card explanation alone is a failure. ` +
       `Example — Eight of Cups: do NOT write only "a quiet withdrawal, seeking deeper fulfillment" (that is a card definition). Instead write what it means HERE: "one person is quietly stepping back — the closeness that was there is cooling, and they are starting to look elsewhere for what they're not getting." ` +
       `Example — Seven of Cups in future: not "many possibilities, some illusory" (textbook), but "the path ahead isn't one clear direction — several options stay open, but not all are real. What is imagined and what is actually being built may turn out to be very different." ` +
-      `Every paragraph must answer the reader's real question: what is the OTHER person doing, where is the connection going, is it warming or cooling. ` +
-      `SUBJECT RULE (most important for focus): Most sentences must have "the other person" or "the connection/relationship" as their grammatical subject. Sentences whose subject is "you/the querent" must be the MINORITY. Do NOT write "you are left to interpret the silence" or "your anxiety fills the void" — write "the other person has gone quiet" or "the silence is being left unexplained". Aim for roughly: other person 40%, the relationship 40%, the querent 20%. ` +
-      `Do NOT make the querent's anxiety, need for reassurance, fear of uncertainty, insecurity, longing, or doubt the primary subject. These may appear briefly but must NEVER dominate. The reader wants to know about the other person and the relationship — not to be psychoanalyzed. ` +
-      `PRESENT CARD — go deepest here: when a card shows a feeling or stance (e.g. calm, distance, interest), do NOT stop at naming it. Pin down WHAT KIND it is for this relationship: is the other person's calm a sign of real interest, comfortable friendship, mild fondness, or quiet certainty? The reader needs to know which. Name it. ` +
-      `FUTURE CARD — keep it about the RELATIONSHIP'S direction, not the querent's inner work. Even a reversed or blocked card should read as "what will happen between them / what one person will do", NOT "the querent needs to reflect / look inward / understand themselves". Never turn the future into a self-development lesson. ` +
-      `A love reading should PRIMARILY focus on: (1) the other person's state and behavior, (2) the dynamic between the two people, (3) the likely direction of the connection. ` +
+      focusRules +
       `Do NOT convert the reading into a lesson about the querent's worth or validation. Personal growth, self-worth, healing, validation, or inner lessons may ONLY appear if a card strongly demands it — NEVER as the dominant theme. ` +
       `Describe what each person is actually doing, avoiding, or pursuing. Address attraction, avoidance, mixed signals, communication, timing, who moves toward and who pulls back. ` +
       `Speak with directness, prioritizing clarity over comfort. Be honest about red flags without being harsh. ` +
