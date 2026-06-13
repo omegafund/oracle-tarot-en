@@ -3825,7 +3825,11 @@ export default {
 
         // Real Creem path (only when configured with API key + product id)
         if (creemKey && productId && !String(productId).includes('TODO')) {
-          const origin = url.origin;
+          // success_url must point to the FRONTEND (en.zeustarot.com), not the worker.
+          // Prefer the request's Origin header; fall back to configured FRONTEND_URL or the known domain.
+          const reqOrigin = request.headers.get('Origin')
+            || (env && env.FRONTEND_URL)
+            || 'https://en.zeustarot.com';
           const reqId = `zeus_${plan}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
           // test keys (creem_test_*) must use the test API host; live keys use production.
           const creemBase = String(creemKey).startsWith('creem_test_')
@@ -3840,7 +3844,7 @@ export default {
             body: JSON.stringify({
               product_id: productId,
               request_id: reqId,
-              success_url: `${origin}/?creem_return=1&plan=${plan}`,
+              success_url: `${reqOrigin}/?creem_return=1&plan=${plan}`,
               metadata: { plan }
             })
           });
