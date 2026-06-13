@@ -3633,6 +3633,7 @@ const REFLECTION_GUIDANCE =
   `BAD (forbidden): "You fear success." / "You seek validation." / "You have an attachment problem." — these are diagnoses with no behavior. ` +
   `GOOD (required): "You delay decisions until you feel certain. Opportunities pass while you wait. The pattern isn't fear of success — it's treating uncertainty as danger." — behavior, then consequence, then pattern. ` +
   `KEEP THE CARD STRUCTURE: Do NOT abandon the cards for a therapy monologue. Map the three cards: PAST card = how this pattern formed / an early version of it; PRESENT card = how the pattern operates right now (what they do today); FUTURE card = where it leads if it continues, AND what shifts if they change the one concrete behavior. ` +
+  `SHOW THE CYCLE: When revealing a pattern, trace it as a concrete loop — external signal → the querent's interpretation → their reaction. Example: "They reply late → you read it as distance → you wait harder instead of asking." Make the loop visible with real actions, not feelings. ` +
   `Do NOT use generic self-help ("honor your worth", "trust the journey", "true security comes from within", "your subconscious believes..."). ` +
   `End with ONE concrete behavioral change to try — not an abstract affirmation. Example: "Start asking for a clear answer instead of reading into silence" — not "learn to value yourself". `;
 
@@ -3655,6 +3656,8 @@ function buildSystemPromptEN(domain, subjectName, relationshipState, loveSubtype
     `Avoid excessive use of: healing, gentle, soft, tender, warmth, journey, energy, allow, embrace, trust, inner, authentic, wisdom, grounded, clarity, opening, connection, landscape, attachment, passion, perspective, process, center, depth, residue, foundation, terrain, realm, weight, empower, wellbeing, motives, resistance, avoidance. ` +
     `Do NOT use therapy language or psychological labels. Avoid: "inner landscape", "emotional center", "deep passion", "internal process", "perspective shift", "healing journey", "personal growth", "self-worth", "emotional wounds", "inner child", "emotional intelligence", "attachment pattern", "emotional processing", "inner transformation", "fear of commitment", "immaturity", "attachment style", "trauma response". ` +
     `Do not output JSON or headers — write flowing prose. ` +
+    `Avoid repeatedly framing the reading around "certainty", "clarity", "ambiguity", "uncertainty", or "not knowing" — these have become overused abstractions. Use observable situations, actions, and exchanges instead. ` +
+    `Every paragraph must include at least one observable behavior, event, or interaction — not only emotional or conceptual language. Write "they pull back after getting close" not "you feel uncertainty". ` +
     `Honor the structured metrics already computed; expand on them with insight, never contradict them. ` +
     ORACLE_UNIVERSAL_RULES +
     (oracleStyle && ORACLE_STYLE_PROMPT[oracleStyle]
