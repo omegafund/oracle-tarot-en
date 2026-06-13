@@ -3827,7 +3827,11 @@ export default {
         if (creemKey && productId && !String(productId).includes('TODO')) {
           const origin = url.origin;
           const reqId = `zeus_${plan}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-          const creemRes = await fetch('https://api.creem.io/v1/checkouts', {
+          // test keys (creem_test_*) must use the test API host; live keys use production.
+          const creemBase = String(creemKey).startsWith('creem_test_')
+            ? 'https://test-api.creem.io'
+            : 'https://api.creem.io';
+          const creemRes = await fetch(`${creemBase}/v1/checkouts`, {
             method: 'POST',
             headers: {
               'x-api-key': creemKey,
