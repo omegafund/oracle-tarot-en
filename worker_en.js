@@ -3808,55 +3808,51 @@ export default {
     // ════════════════════════════════════════
 
     // 1) Create checkout session.
-    //    Frontend expects { url, test_mode }. If real Stripe is configured
-    //    (STRIPE_SECRET_KEY + a real price id), return a hosted checkout url.
+    //    Frontend expects { url, test_mode }. If real Creem is configured
+    //    (CREEM_API_KEY + a real product id), return a hosted checkout url.
     //    Otherwise return { test_mode: true } so the frontend falls back to /unlock-test.
     if (url.pathname === '/create-checkout-session' && request.method === 'POST') {
       try {
         const body = await request.json().catch(() => ({}));
         const plan = body && body.plan;
-        if (!isValidPlan(plan)) {
+        if (!isValidPlan(plan) || plan === 'dev') {
           return new Response(JSON.stringify({ ok: false, error: 'Invalid plan' }),
             { status: 400, headers: corsHeaders() });
         }
 
-        const priceId = env && env[`STRIPE_PRICE_${plan.toUpperCase()}`];
-        const stripeKey = env && env.STRIPE_SECRET_KEY;
+        const productId = env && env[`CREEM_PRODUCT_${plan.toUpperCase()}`];
+        const creemKey = env && env.CREEM_API_KEY;
 
-        // Real Stripe path (only when fully configured with a non-placeholder price id)
-        if (stripeKey && priceId && !String(priceId).includes('TODO')) {
+        // Real Creem path (only when configured with API key + product id)
+        if (creemKey && productId && !String(productId).includes('TODO')) {
           const origin = url.origin;
-          const isSubscription = (plan === 'monthly' || plan === 'yearly');
-          const form = new URLSearchParams();
-          form.set('mode', isSubscription ? 'subscription' : 'payment');
-          form.set('line_items[0][price]', priceId);
-          form.set('line_items[0][quantity]', '1');
-          form.set('success_url', `${origin}/success?session_id={CHECKOUT_SESSION_ID}&plan=${plan}`);
-          form.set('cancel_url', `${origin}/?canceled=1`);
-          form.set('metadata[plan]', plan);
-
-          const stripeRes = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+          const reqId = `zeus_${plan}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+          const creemRes = await fetch('https://api.creem.io/v1/checkouts', {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${stripeKey}`,
-              'Content-Type': 'application/x-www-form-urlencoded'
+              'x-api-key': creemKey,
+              'Content-Type': 'application/json'
             },
-            body: form.toString()
+            body: JSON.stringify({
+              product_id: productId,
+              request_id: reqId,
+              success_url: `${origin}/?creem_return=1&plan=${plan}`,
+              metadata: { plan }
+            })
           });
-          const session = await stripeRes.json();
-          if (!stripeRes.ok) {
-            return new Response(JSON.stringify({ ok: false, error: session?.error?.message || 'Stripe error', test_mode: true }),
+          const session = await creemRes.json().catch(() => ({}));
+          if (!creemRes.ok || !session.checkout_url) {
+            return new Response(JSON.stringify({ ok: false, error: (session && session.message) || 'Creem error', test_mode: true }),
               { status: 200, headers: corsHeaders() });
           }
-          return new Response(JSON.stringify({ ok: true, url: session.url, test_mode: false }),
+          return new Response(JSON.stringify({ ok: true, url: session.checkout_url, test_mode: false }),
             { status: 200, headers: corsHeaders() });
         }
 
-        // Test mode — Stripe not configured yet (price_TODO_*)
+        // Test mode — Creem not configured yet
         return new Response(JSON.stringify({ ok: true, test_mode: true }),
           { status: 200, headers: corsHeaders() });
       } catch (err) {
-        // Any failure still routes the frontend into test mode gracefully
         return new Response(JSON.stringify({ ok: false, test_mode: true, error: err.message }),
           { status: 200, headers: corsHeaders() });
       }
@@ -3881,39 +3877,54 @@ export default {
       }
     }
 
-    // 3) Verify a completed Stripe payment by session id.
+    // 3) Verify a completed Creem payment via the signed return-URL params.
+    //    Frontend collects all query params from the success redirect and POSTs them here.
     //    Frontend expects { ok: true, token, plan }.
     if (url.pathname === '/verify-payment' && request.method === 'POST') {
       try {
         const body = await request.json().catch(() => ({}));
-        const sessionId = body && body.sessionId;
-        if (!sessionId) {
-          return new Response(JSON.stringify({ ok: false, error: 'Missing sessionId' }),
+        const params = (body && body.params) || {};
+        const sig = params.signature;
+        const creemKey = env && env.CREEM_API_KEY;
+
+        if (!creemKey) {
+          return new Response(JSON.stringify({ ok: false, error: 'Creem not configured' }),
+            { status: 503, headers: corsHeaders() });
+        }
+        if (!sig) {
+          return new Response(JSON.stringify({ ok: false, error: 'Missing signature' }),
             { status: 400, headers: corsHeaders() });
         }
 
-        const stripeKey = env && env.STRIPE_SECRET_KEY;
-        if (!stripeKey) {
-          return new Response(JSON.stringify({ ok: false, error: 'Stripe not configured' }),
-            { status: 503, headers: corsHeaders() });
-        }
+        // Rebuild signature string: all params except 'signature', exclude null/empty, sort by key.
+        const keys = Object.keys(params)
+          .filter(k => k !== 'signature')
+          .filter(k => {
+            const v = params[k];
+            return v !== null && v !== undefined && v !== '' && v !== 'null';
+          })
+          .sort();
+        const sortedParams = keys.map(k => `${k}=${params[k]}`).join('&');
 
-        const sRes = await fetch(`https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}`, {
-          headers: { 'Authorization': `Bearer ${stripeKey}` }
-        });
-        const session = await sRes.json();
-        if (!sRes.ok) {
-          return new Response(JSON.stringify({ ok: false, error: session?.error?.message || 'Stripe lookup failed' }),
-            { status: 502, headers: corsHeaders() });
-        }
+        // HMAC-SHA256 with API key as secret
+        const key = await importHmacKey(creemKey);
+        const sigBytes = await crypto.subtle.sign('HMAC', key, utf8(sortedParams));
+        const expected = Array.from(new Uint8Array(sigBytes))
+          .map(b => b.toString(16).padStart(2, '0')).join('');
 
-        const paid = session.payment_status === 'paid' || session.status === 'complete';
-        const plan = (session.metadata && session.metadata.plan) || 'monthly';
-        if (!paid) {
-          return new Response(JSON.stringify({ ok: false, error: 'Payment not completed' }),
+        // Timing-safe-ish compare (length + constant accumulate)
+        let match = expected.length === String(sig).length;
+        for (let i = 0; i < expected.length && i < String(sig).length; i++) {
+          if (expected[i] !== String(sig)[i]) match = false;
+        }
+        if (!match) {
+          return new Response(JSON.stringify({ ok: false, error: 'Invalid signature' }),
             { status: 402, headers: corsHeaders() });
         }
-        const token = await issueToken(env, isValidPlan(plan) ? plan : 'monthly');
+
+        // Signature valid — payment is authentic. Issue token for the plan.
+        const plan = (params.plan && isValidPlan(params.plan) && params.plan !== 'dev') ? params.plan : 'monthly';
+        const token = await issueToken(env, plan);
         return new Response(JSON.stringify({ ok: true, token, plan }),
           { status: 200, headers: corsHeaders() });
       } catch (err) {
@@ -4334,7 +4345,7 @@ export default {
         config: {
           token_secret: !!(env && env.TOKEN_SECRET),
           gemini: !!(env && env.GEMINI_API_KEY),
-          stripe: !!(env && env.STRIPE_SECRET_KEY),
+          creem: !!(env && env.CREEM_API_KEY),
           kv_bound: !!getKV(env),
           admin_key: !!(env && env.ADMIN_KEY)
         }
