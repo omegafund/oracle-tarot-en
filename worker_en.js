@@ -2398,11 +2398,11 @@ function runWealthEngine(ctx) {
   // "Action" as a gentle reflection with a soft direction (interpretation,
   // not instruction). Centered on inner posture and self-worth.
   const ACTION_LABEL = {
-    EXPANSIVE: "This may align with a season of opening toward what you truly value.",
+    EXPANSIVE: "Momentum is building — this may be a season to act on what is opening up.",
     OPENING: "Something may be gently warming — there is room for grounded, unhurried steps.",
-    BALANCED: "This may be a time to let clarity settle before leaning in any direction.",
-    GUARDED: "This may speak to tending your own sense of worth before reaching outward.",
-    CONTRACTING: "This may be a season for restoring and reconnecting with what matters, more than pushing."
+    BALANCED: "This may be a time to let the situation settle before committing to a direction.",
+    GUARDED: "This may be a time to consolidate what you have built before taking on more.",
+    CONTRACTING: "This may be a season for steadying your footing rather than pushing for more."
   };
   const action = ACTION_LABEL[energyKey];
 
@@ -2428,29 +2428,29 @@ function runWealthEngine(ctx) {
   if (energyKey === "EXPANSIVE" || energyKey === "OPENING") {
     flowSummary = _rising
       ? pickVariant(cleanCards, [
-          "Something is opening within your sense of worth — a quiet momentum is gathering.",
-          "An inner sense of value is steadily becoming more grounded — small recognitions are landing.",
-          "Worth feels less like a question and more like a settling — the ground beneath your value is firming.",
-          "A quiet expansion in self-regard is underway — what you bring is registering more clearly."
+          "Momentum is gathering — your efforts are starting to find traction.",
+          "The groundwork is steadily paying off — small results are landing.",
+          "Things are firming up — what you have built is becoming more solid.",
+          "Forward motion is picking up — your work is registering more clearly."
         ])
       : pickVariant(cleanCards, [
-          "Even after an early dip, your inner sense of value is steadily opening.",
-          "Despite a rough patch, the deeper current around worth is turning toward fullness.",
-          "An early shadow gave way — your sense of enough is gradually returning.",
-          "Past doubt is loosening; the felt sense of value is widening again."
+          "Even after an early dip, momentum is steadily building back.",
+          "Despite a rough patch, the overall direction is turning toward progress.",
+          "An early setback gave way — traction is gradually returning.",
+          "Past friction is loosening; forward motion is widening again."
         ]);
   } else if (energyKey === "CONTRACTING" || energyKey === "GUARDED") {
     flowSummary = _rising
       ? pickVariant(cleanCards, [
-          "A late lift appears, yet the deeper current still feels restricted — move with care.",
-          "Brightness near the end, but the underlying sense of worth still asks for protection.",
-          "Something eases late, though the inner ground around value remains tender."
+          "A late lift appears, yet conditions still feel tight — move with care.",
+          "Things ease near the end, but the foundation still needs protecting.",
+          "Something opens up late, though the ground underneath remains shaky."
         ])
       : pickVariant(cleanCards, [
-          "The energy feels restricted around value and self-worth — a time to restore rather than expand.",
-          "A contraction in self-regard is real here — replenishment matters more than reaching.",
-          "Worth feels tightened right now — this is a season for repair, not push.",
-          "Inner resources feel thin — let the well refill before drawing from it."
+          "Conditions feel tight right now — a time to consolidate rather than expand.",
+          "Energy is pulling back — recovery matters more than reaching for more.",
+          "Things feel constrained right now — this is a season for repair, not push.",
+          "Reserves feel thin — let things rebuild before drawing on them again."
         ]);
   } else { // BALANCED
     flowSummary = pickVariant(cleanCards, [
@@ -3464,7 +3464,7 @@ const FORTUNE_SEED = {
   "Death": { energy: "an ending that frees you; profound transformation; the necessary close before rebirth", shadow: "clutching the past; fearing a change already underway" },
   "Temperance": { energy: "two sides slowly finding a workable middle; steady adjustment; patience paying off", shadow: "one side giving too much; a fragile compromise that may not hold" },
   "The Devil": { energy: "a pull that is hard to step away from; seeing clearly what keeps you tied to a situation, habit, or person", shadow: "staying in something that drains you; a hold that feels stronger than it is" },
-  "The Tower": { energy: "a sudden upheaval clearing false ground; fate's lightning; truth that frees through collapse", shadow: "resisting the fall; rebuilding the same flawed tower" },
+  "The Tower": { energy: "a sudden disruption that breaks down what was unstable; a structure giving way; a forced reset", shadow: "trying to rebuild the same thing that just failed; resisting a change already happening" },
   "The Star": { energy: "a calmer stretch after a hard period; a clear sense of direction returning; steady recovery", shadow: "waiting and hoping without taking concrete steps" },
   "The Moon": { energy: "mixed signals and unclear information; things not adding up yet; waiting for the picture to clear", shadow: "being misled; acting on a wrong read of the situation" },
   "The Sun": { energy: "radiant joy and success; clarity and vitality; a blessed season where life opens fully", shadow: "blinding optimism; burning out in the glare" },
