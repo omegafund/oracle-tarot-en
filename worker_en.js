@@ -2193,9 +2193,9 @@ function buildFortuneMetrics({ totalScore, riskScore, cleanCards, reversedFlags,
         ]);
   } else { // OBSERVE
     flowSummary = pickVariant(cleanCards, [
-      "The energy holds in a quiet balance — clarity may come once you name what you want.",
+      "The energy holds in a quiet balance — the situation hasn't tipped one way yet.",
       "Things feel poised between directions — the picture is still forming.",
-      "There is a pause in the pattern — the next step isn't yet clear."
+      "There is a pause in the pattern — the next move hasn't taken shape yet."
     ]);
   }
 
@@ -3453,7 +3453,7 @@ const FORTUNE_SEED = {
   "The High Priestess": { energy: "something important is not being said yet; a situation where key facts stay private for now; watching before acting", shadow: "being kept out of the loop; a decision made without full information" },
   "The Empress": { energy: "things growing steadily; effort starting to bear fruit; a supportive, productive period", shadow: "getting too comfortable; overgiving until your own work stalls" },
   "The Emperor": { energy: "structure, authority, and solid ground; building order from chaos; protective stability", shadow: "rigidity; control that becomes domination" },
-  "The Hierophant": { energy: "tradition, mentorship, and shared belief; guidance from established wisdom; belonging", shadow: "dogma; conforming against your own truth" },
+  "The Hierophant": { energy: "following a proven process or repeatable routine; learning from a mentor or established structure; doing it the tested way", shadow: "sticking to the rulebook when the situation has changed; following others when your own approach would fit better" },
   "The Lovers": { energy: "union, harmony, and a values-defining choice; deep connection; alignment of heart and path", shadow: "torn loyalties; a choice avoided too long" },
   "The Chariot": { energy: "triumphant forward drive; willpower steering opposing forces; victory through focus", shadow: "control by force; momentum with no destination" },
   "Strength": { energy: "gentle courage and inner power; taming difficulty with patience; quiet, unshakable resolve", shadow: "self-doubt; raw force where softness was needed" },
@@ -3463,7 +3463,7 @@ const FORTUNE_SEED = {
   "The Hanged Man": { energy: "a forced wait where nothing moves yet; a situation on hold; seeing it from a new angle while stuck", shadow: "stalled with no end in sight; giving up leverage for nothing" },
   "Death": { energy: "an ending that frees you; profound transformation; the necessary close before rebirth", shadow: "clutching the past; fearing a change already underway" },
   "Temperance": { energy: "two sides slowly finding a workable middle; steady adjustment; patience paying off", shadow: "one side giving too much; a fragile compromise that may not hold" },
-  "The Devil": { energy: "a pull that is hard to step away from; seeing clearly what keeps you tied to a situation, habit, or person", shadow: "staying in something that drains you; a hold that feels stronger than it is" },
+  "The Devil": { energy: "a hard-to-break habit running the show — checking the same thing repeatedly, holding tight control, returning to what is familiar even when it costs you", shadow: "staying locked into a routine that drains you; a grip that feels necessary but is not" },
   "The Tower": { energy: "a sudden disruption that breaks down what was unstable; a structure giving way; a forced reset", shadow: "trying to rebuild the same thing that just failed; resisting a change already happening" },
   "The Star": { energy: "a calmer stretch after a hard period; a clear sense of direction returning; steady recovery", shadow: "waiting and hoping without taking concrete steps" },
   "The Moon": { energy: "mixed signals and unclear information; things not adding up yet; waiting for the picture to clear", shadow: "being misled; acting on a wrong read of the situation" },
@@ -3672,7 +3672,7 @@ function buildSystemPromptEN(domain, subjectName, relationshipState, loveSubtype
     `Avoid excessive use of: healing, gentle, soft, tender, warmth, journey, energy, allow, embrace, trust, inner, authentic, wisdom, grounded, clarity, opening, connection, landscape, attachment, passion, perspective, process, center, depth, residue, foundation, terrain, realm, weight, empower, wellbeing, motives, resistance, avoidance. ` +
     `Do NOT use therapy language or psychological labels. Avoid: "inner landscape", "emotional center", "deep passion", "internal process", "perspective shift", "healing journey", "personal growth", "self-worth", "emotional wounds", "inner child", "emotional intelligence", "attachment pattern", "emotional processing", "inner transformation", "fear of commitment", "immaturity", "attachment style", "trauma response". ` +
     `Do not output JSON or headers — write flowing prose. ` +
-    `Avoid repeatedly framing the reading around "certainty", "clarity", "ambiguity", "uncertainty", or "not knowing" — these have become overused abstractions. Use observable situations, actions, and exchanges instead. ` +
+    `Avoid framing the reading around "certainty", "clarity", "ambiguity", "uncertainty", or "not knowing" — in the body AND in the Guiding Principles, Risk, and Signal. These are overused abstractions. Do NOT write "stop waiting for perfect certainty" or "clarity will come"; instead name the concrete thing — "stop waiting for a fully mapped plan", "the next step hasn't taken shape". Use observable situations, actions, and exchanges. ` +
     `Every paragraph must include at least one observable behavior, event, or interaction — not only emotional or conceptual language. Write "they pull back after getting close" not "you feel uncertainty". ` +
     `Honor the structured metrics already computed; expand on them with insight, never contradict them. ` +
     ORACLE_UNIVERSAL_RULES +
