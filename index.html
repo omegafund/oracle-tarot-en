@@ -663,7 +663,7 @@
         <div class="paywall-reason" id="paywall-reason">Reveal your complete 5-layer reading</div>
 
         <div class="paywall-test-banner" id="paywall-test-banner">
-            ⚠️ TEST MODE — Stripe integration pending
+            ⚠️ TEST MODE — payment integration in testing
         </div>
 
         <div class="plan-list" id="plan-list">
@@ -820,10 +820,9 @@ const PAYMENT_PLANS = {
         id:              'trial',
         name:            'Trial',
         desc:            '3 deep readings · 24 hours',
-        price_cents:     99,                                // $0.99
+        price_cents:     100,                               // $1.00
         currency:        'USD',
         duration_ms:     24 * 60 * 60 * 1000,               // 24 hours
-        stripe_price_id: 'price_TODO_TRIAL',                // ← Stripe   
     },
     monthly: {
         id:              'monthly',
@@ -832,7 +831,6 @@ const PAYMENT_PLANS = {
         price_cents:     799,                               // $7.99
         currency:        'USD',
         duration_ms:     30 * 24 * 60 * 60 * 1000,
-        stripe_price_id: 'price_TODO_MONTHLY',
     },
     yearly: {
         id:              'yearly',
@@ -841,18 +839,7 @@ const PAYMENT_PLANS = {
         price_cents:     5900,                              // $59.00
         currency:        'USD',
         duration_ms:     365 * 24 * 60 * 60 * 1000,
-        stripe_price_id: 'price_TODO_YEARLY',
         featured:        true,
-    },
-    dev: {
-        id:              'dev',
-        name:            'Dev',
-        desc:            'Unlimited — development only',
-        price_cents:     0,
-        currency:        'USD',
-        duration_ms:     365 * 24 * 60 * 60 * 1000,
-        stripe_price_id: 'price_DEV_ONLY',
-        featured:        false,
     },
 };
 
@@ -924,7 +911,7 @@ async function handlePayment(plan = 'monthly') {
             if (testData.ok && testData.token) {
                 unlockPremium(plan, testData.token);
                 hidePaywall();
-                alert(`✅ Test unlock complete!\n\n${planData.name} active.\nReal Stripe coming soon.`);
+                alert(`✅ Test unlock complete!\n\n${planData.name} active.`);
                 return;
             }
             throw new Error(testData.error || 'unlock failed');
