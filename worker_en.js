@@ -3892,49 +3892,41 @@ export default {
       try {
         const body = await request.json().catch(() => ({}));
         const params = (body && body.params) || {};
-        const sig = params.signature;
+        const checkoutId = params.checkout_id;
         const creemKey = env && env.CREEM_API_KEY;
 
         if (!creemKey) {
           return new Response(JSON.stringify({ ok: false, error: 'Creem not configured' }),
             { status: 503, headers: corsHeaders() });
         }
-        if (!sig) {
-          return new Response(JSON.stringify({ ok: false, error: 'Missing signature' }),
+        if (!checkoutId) {
+          return new Response(JSON.stringify({ ok: false, error: 'Missing checkout_id' }),
             { status: 400, headers: corsHeaders() });
         }
 
-        // Creem signs these official params. request_id may or may not be included
-        // in the signature depending on the flow, so we try both combinations.
-        const buildSig = async (fields) => {
-          const ks = fields
-            .filter(k => {
-              const v = params[k];
-              return v !== null && v !== undefined && v !== '' && v !== 'null';
-            })
-            .sort();
-          const str = ks.map(k => `${k}=${params[k]}`).join('&');
-          const key = await importHmacKey(creemKey);
-          const sb = await crypto.subtle.sign('HMAC', key, utf8(str));
-          const hex = Array.from(new Uint8Array(sb)).map(b => b.toString(16).padStart(2, '0')).join('');
-          return { str, hex };
-        };
+        // Verify payment by asking Creem directly about this checkout's status.
+        // This is authoritative (API-key authenticated) and avoids return-url signature pitfalls.
+        const creemBase = String(creemKey).startsWith('creem_test_')
+          ? 'https://test-api.creem.io'
+          : 'https://api.creem.io';
+        const lookup = await fetch(`${creemBase}/v1/checkouts?checkout_id=${encodeURIComponent(checkoutId)}`, {
+          headers: { 'x-api-key': creemKey }
+        });
+        const checkout = await lookup.json().catch(() => ({}));
+        if (!lookup.ok) {
+          return new Response(JSON.stringify({ ok: false, error: (checkout && checkout.message) || 'Checkout lookup failed' }),
+            { status: 502, headers: corsHeaders() });
+        }
 
-        const withReq = await buildSig(['checkout_id', 'order_id', 'customer_id', 'subscription_id', 'product_id', 'request_id']);
-        const noReq = await buildSig(['checkout_id', 'order_id', 'customer_id', 'subscription_id', 'product_id']);
-        const sigStr = String(sig);
-        const matched = (withReq.hex === sigStr) || (noReq.hex === sigStr);
-
-        console.log('SIG_DEBUG given:', sigStr);
-        console.log('SIG_DEBUG withReq:', withReq.hex, '| str:', withReq.str);
-        console.log('SIG_DEBUG noReq:', noReq.hex, '| str:', noReq.str);
-
-        if (!matched) {
-          return new Response(JSON.stringify({ ok: false, error: 'Invalid signature' }),
+        // paid / completed / active all mean the purchase went through.
+        const status = checkout && checkout.status;
+        const paid = ['paid', 'completed', 'active'].includes(status);
+        if (!paid) {
+          return new Response(JSON.stringify({ ok: false, error: `Payment not completed (status: ${status})` }),
             { status: 402, headers: corsHeaders() });
         }
 
-        // Signature valid — payment is authentic. Issue token for the plan.
+        // Confirmed paid — issue token. Prefer plan from params, fall back to monthly.
         const plan = (params.plan && isValidPlan(params.plan) && params.plan !== 'dev') ? params.plan : 'monthly';
         const token = await issueToken(env, plan);
         return new Response(JSON.stringify({ ok: true, token, plan }),
