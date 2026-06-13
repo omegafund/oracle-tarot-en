@@ -3451,21 +3451,21 @@ const FORTUNE_SEED = {
   "The Fool": { energy: "infinite open road ahead; courage to take the first step; the universe favoring your leap into the new", shadow: "naive haste; stepping off the edge without looking" },
   "The Magician": { energy: "everything you need is already in hand; will and skill aligning to manifest; a moment of true capability", shadow: "talent spent on illusion; manipulation over honesty" },
   "The High Priestess": { energy: "something important is not being said yet; a situation where key facts stay private for now; watching before acting", shadow: "being kept out of the loop; a decision made without full information" },
-  "The Empress": { energy: "abundance, nurture, and creative flourishing; life blooming around you; warmth and fertile growth", shadow: "smothering; comfort tipping into stagnation" },
+  "The Empress": { energy: "things growing steadily; effort starting to bear fruit; a supportive, productive period", shadow: "getting too comfortable; overgiving until your own work stalls" },
   "The Emperor": { energy: "structure, authority, and solid ground; building order from chaos; protective stability", shadow: "rigidity; control that becomes domination" },
   "The Hierophant": { energy: "tradition, mentorship, and shared belief; guidance from established wisdom; belonging", shadow: "dogma; conforming against your own truth" },
   "The Lovers": { energy: "union, harmony, and a values-defining choice; deep connection; alignment of heart and path", shadow: "torn loyalties; a choice avoided too long" },
   "The Chariot": { energy: "triumphant forward drive; willpower steering opposing forces; victory through focus", shadow: "control by force; momentum with no destination" },
   "Strength": { energy: "gentle courage and inner power; taming difficulty with patience; quiet, unshakable resolve", shadow: "self-doubt; raw force where softness was needed" },
   "The Hermit": { energy: "stepping back from the crowd to figure something out alone; a deliberate period of distance; working it out privately", shadow: "isolating too long; cutting off people who could help" },
-  "Wheel of Fortune": { energy: "fate turning and cycles shifting; a lucky pivot; change arriving on its own current", shadow: "clinging to a turning wheel; resisting inevitable change" },
+  "Wheel of Fortune": { energy: "circumstances shifting outside your control; a turning point arriving; timing changing the situation", shadow: "holding onto a situation past its point; resisting a change already underway" },
   "Justice": { energy: "truth, fairness, and karmic balance; clear cause and effect; accountability settled", shadow: "consequences arriving; old imbalances coming due" },
   "The Hanged Man": { energy: "a forced wait where nothing moves yet; a situation on hold; seeing it from a new angle while stuck", shadow: "stalled with no end in sight; giving up leverage for nothing" },
   "Death": { energy: "an ending that frees you; profound transformation; the necessary close before rebirth", shadow: "clutching the past; fearing a change already underway" },
   "Temperance": { energy: "two sides slowly finding a workable middle; steady adjustment; patience paying off", shadow: "one side giving too much; a fragile compromise that may not hold" },
-  "The Devil": { energy: "facing your attachments and shadow; awareness of what binds you; the door to liberation", shadow: "bondage to craving, fear, or unhealthy ties" },
+  "The Devil": { energy: "a pull that is hard to step away from; seeing clearly what keeps you tied to a situation, habit, or person", shadow: "staying in something that drains you; a hold that feels stronger than it is" },
   "The Tower": { energy: "a sudden upheaval clearing false ground; fate's lightning; truth that frees through collapse", shadow: "resisting the fall; rebuilding the same flawed tower" },
-  "The Star": { energy: "hope, renewal, and gentle healing after hardship; faith restored; a guiding light", shadow: "wishful drifting; hope untethered from action" },
+  "The Star": { energy: "a calmer stretch after a hard period; a clear sense of direction returning; steady recovery", shadow: "waiting and hoping without taking concrete steps" },
   "The Moon": { energy: "mixed signals and unclear information; things not adding up yet; waiting for the picture to clear", shadow: "being misled; acting on a wrong read of the situation" },
   "The Sun": { energy: "radiant joy and success; clarity and vitality; a blessed season where life opens fully", shadow: "blinding optimism; burning out in the glare" },
   "Judgement": { energy: "awakening, reckoning, and a clear call to rise; rebirth into a higher chapter", shadow: "harsh self-judgment; ignoring the call to change" },
@@ -3627,20 +3627,35 @@ function isSelfReflectionQuestion(prompt) {
 }
 
 // Concrete-reflection guidance appended for self-reflection questions in any domain.
-const REFLECTION_GUIDANCE =
+const REFLECTION_GUIDANCE_BASE =
   ` SELF-REFLECTION MODE: This is an introspective question about the querent's own pattern, fear, or behavior. Center the querent — but follow these rules strictly, or the reading becomes cheap coaching. ` +
   `BEHAVIOR-FIRST ORDER (critical): Never name a psychological trait before describing the observable behavior. For each point: (1) what the person repeatedly DOES, (2) what consequence follows, (3) only THEN the underlying pattern. Behavior first, interpretation second. ` +
   `BAD (forbidden): "You fear success." / "You seek validation." / "You have an attachment problem." — these are diagnoses with no behavior. ` +
   `GOOD (required): "You delay decisions until you feel certain. Opportunities pass while you wait. The pattern isn't fear of success — it's treating uncertainty as danger." — behavior, then consequence, then pattern. ` +
-  `KEEP THE CARD STRUCTURE: Do NOT abandon the cards for a therapy monologue. Map the three cards: PAST card = how this pattern formed / an early version of it; PRESENT card = how the pattern operates right now (what they do today); FUTURE card = where it leads if it continues, AND what shifts if they change the one concrete behavior. ` +
-  `SHOW THE CYCLE: When revealing a pattern, trace it as a concrete loop — external signal → the querent's interpretation → their reaction. Example: "They reply late → you read it as distance → you wait harder instead of asking." Make the loop visible with real actions, not feelings. ` +
-  `IF THE QUESTION ASKS "WHY" (hesitation, fear, repeated avoidance): do NOT stop at describing the behavior — that only holds up a mirror. Trace the full chain: trigger → the specific fear driving it → the behavior → the consequence. Name the fear concretely and surprisingly, not generically. Example: "When a real chance appears, you measure it against an imagined perfect version. The fear isn't failure — it's committing to something that might close off a better option later. So you find a flaw, step back, and wait. That protects you from regret, but it also kills momentum." The fear is the answer the reader came for. ` +
+  `KEEP THE CARD STRUCTURE: Do NOT abandon the cards for a therapy monologue. Map the three cards: PAST card = how this pattern formed / an early version of it; PRESENT card = how the pattern operates right now (what they do today); FUTURE card = where it leads if it continues, AND what shifts if they change the one concrete behavior. `;
+
+// Love reflection: relational reaction loop.
+const REFLECTION_CHAIN_LOVE =
+  `SHOW THE CYCLE: Trace the pattern as a concrete relational loop — external signal → the querent's interpretation → their reaction. Example: "They reply late → you read it as distance → you wait harder instead of asking." Make the loop visible with real actions, not feelings. `;
+
+// Fortune / stock / decision reflection: why-chain that names the fear.
+const REFLECTION_CHAIN_WHY =
+  `TRACE THE FULL CHAIN: Do NOT stop at describing the behavior — that only holds up a mirror. For "why do I hesitate / fear / keep avoiding" questions, trace: trigger → the specific fear driving it → the behavior → the consequence. Name the fear concretely and surprisingly, not generically. Example: "When a real chance appears, you measure it against an imagined perfect version. The fear isn't failure — it's committing to something that might close off a better option later. So you find a flaw, step back, and wait. That protects you from regret, but it also kills momentum." The fear is the answer the reader came for. `;
+
+const REFLECTION_GUIDANCE_END =
   `Do NOT use generic self-help ("honor your worth", "trust the journey", "true security comes from within", "your subconscious believes..."). ` +
   `End with ONE concrete behavioral change to try — not an abstract affirmation. Example: "Start asking for a clear answer instead of reading into silence" — not "learn to value yourself". `;
+
+// Compose domain-appropriate reflection guidance.
+function reflectionGuidance(domain) {
+  const chain = (domain === 'love') ? REFLECTION_CHAIN_LOVE : REFLECTION_CHAIN_WHY;
+  return REFLECTION_GUIDANCE_BASE + chain + REFLECTION_GUIDANCE_END;
+}
 
 function buildSystemPromptEN(domain, subjectName, relationshipState, loveSubtype, oracleStyle, prompt) {
   const subject = subjectName || 'this asset';
   const isReflectionQ = isSelfReflectionQuestion(prompt);
+  const REFLECTION_GUIDANCE = reflectionGuidance(domain);
   const relationshipEngineInstruction = relationshipState
     ? `Relationship context (if relevant): type=${relationshipState.relationshipType}, emotional intensity=${relationshipState.emotionalIntensity}.`
     : '';
