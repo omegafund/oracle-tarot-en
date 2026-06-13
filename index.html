@@ -944,6 +944,7 @@ async function checkPaymentOnReturn() {
     const sessionId = params.get('session_id');
     const testMode  = params.get('test_mode');
     const planParam = params.get('plan');
+    const creemReturn = params.get('creem_return');
 
     if (testMode === 'true' && planParam) {
         try {
@@ -961,12 +962,15 @@ async function checkPaymentOnReturn() {
         return;
     }
 
-    if (sessionId) {
+    // Creem signed return — collect ALL query params and let the worker verify the HMAC signature.
+    if (creemReturn) {
         try {
+            const allParams = {};
+            for (const [k, v] of params.entries()) allParams[k] = v;
             const res = await fetch(`${WORKER_URL}/verify-payment`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sessionId }),
+                body: JSON.stringify({ params: allParams }),
             });
             const data = await res.json();
             if (data.ok && data.token) {
