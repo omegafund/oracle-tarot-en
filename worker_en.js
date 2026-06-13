@@ -3904,29 +3904,32 @@ export default {
             { status: 400, headers: corsHeaders() });
         }
 
-        // Creem signs ONLY these official params (see docs). Our custom params
-        // (creem_return, plan) are NOT part of Creem's signature and must be excluded.
-        const CREEM_SIGNED = ['checkout_id', 'order_id', 'customer_id', 'subscription_id', 'product_id', 'request_id'];
-        const keys = CREEM_SIGNED
-          .filter(k => {
-            const v = params[k];
-            return v !== null && v !== undefined && v !== '' && v !== 'null';
-          })
-          .sort();
-        const sortedParams = keys.map(k => `${k}=${params[k]}`).join('&');
+        // Creem signs these official params. request_id may or may not be included
+        // in the signature depending on the flow, so we try both combinations.
+        const buildSig = async (fields) => {
+          const ks = fields
+            .filter(k => {
+              const v = params[k];
+              return v !== null && v !== undefined && v !== '' && v !== 'null';
+            })
+            .sort();
+          const str = ks.map(k => `${k}=${params[k]}`).join('&');
+          const key = await importHmacKey(creemKey);
+          const sb = await crypto.subtle.sign('HMAC', key, utf8(str));
+          const hex = Array.from(new Uint8Array(sb)).map(b => b.toString(16).padStart(2, '0')).join('');
+          return { str, hex };
+        };
 
-        // HMAC-SHA256 with API key as secret
-        const key = await importHmacKey(creemKey);
-        const sigBytes = await crypto.subtle.sign('HMAC', key, utf8(sortedParams));
-        const expected = Array.from(new Uint8Array(sigBytes))
-          .map(b => b.toString(16).padStart(2, '0')).join('');
+        const withReq = await buildSig(['checkout_id', 'order_id', 'customer_id', 'subscription_id', 'product_id', 'request_id']);
+        const noReq = await buildSig(['checkout_id', 'order_id', 'customer_id', 'subscription_id', 'product_id']);
+        const sigStr = String(sig);
+        const matched = (withReq.hex === sigStr) || (noReq.hex === sigStr);
 
-        // Timing-safe-ish compare (length + constant accumulate)
-        let match = expected.length === String(sig).length;
-        for (let i = 0; i < expected.length && i < String(sig).length; i++) {
-          if (expected[i] !== String(sig)[i]) match = false;
-        }
-        if (!match) {
+        console.log('SIG_DEBUG given:', sigStr);
+        console.log('SIG_DEBUG withReq:', withReq.hex, '| str:', withReq.str);
+        console.log('SIG_DEBUG noReq:', noReq.hex, '| str:', noReq.str);
+
+        if (!matched) {
           return new Response(JSON.stringify({ ok: false, error: 'Invalid signature' }),
             { status: 402, headers: corsHeaders() });
         }
