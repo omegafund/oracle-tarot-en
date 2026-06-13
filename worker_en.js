@@ -3904,9 +3904,10 @@ export default {
             { status: 400, headers: corsHeaders() });
         }
 
-        // Rebuild signature string: all params except 'signature', exclude null/empty, sort by key.
-        const keys = Object.keys(params)
-          .filter(k => k !== 'signature')
+        // Creem signs ONLY these official params (see docs). Our custom params
+        // (creem_return, plan) are NOT part of Creem's signature and must be excluded.
+        const CREEM_SIGNED = ['checkout_id', 'order_id', 'customer_id', 'subscription_id', 'product_id', 'request_id'];
+        const keys = CREEM_SIGNED
           .filter(k => {
             const v = params[k];
             return v !== null && v !== undefined && v !== '' && v !== 'null';
