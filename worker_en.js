@@ -2077,6 +2077,7 @@ function pickVariant(cleanCards, variants) {
 function buildFortuneMetrics({ totalScore, riskScore, cleanCards, reversedFlags, prompt, domain }) {
   const revFlags = reversedFlags || [false, false, false];
   const isDecision = domain === 'decision';
+  const isReflectionQ = typeof isSelfReflectionQuestion === 'function' && isSelfReflectionQuestion(prompt);
 
   // Action is driven by the SAME basis as trend (totalScore) so they can never
   // 3-zone polarity. The neutral band is intentionally wide so middling draws
@@ -2100,7 +2101,27 @@ function buildFortuneMetrics({ totalScore, riskScore, cleanCards, reversedFlags,
   else trend = "uncertain — finding direction";
 
   let action;
-  if (isDecision) {
+  if (isReflectionQ) {
+    // Self-reflection questions get domain-neutral, observational positioning —
+    // never wealth/love/decision-flavored lines.
+    action = posBias === "GO"
+      ? pickVariant(cleanCards, [
+          "The pattern is ready to shift — a small, concrete change can start it",
+          "There is room to act differently than the habit suggests",
+          "Naming the pattern is the opening; one different choice follows it"
+        ])
+      : posBias === "HOLD_BACK"
+        ? pickVariant(cleanCards, [
+            "Notice the pattern before changing it — watch where it shows up first",
+            "This asks for honest observation more than immediate action",
+            "Sit with what the pattern reveals before deciding the next move"
+          ])
+        : pickVariant(cleanCards, [
+            "Let the pattern come into focus before acting on it",
+            "The insight matters more than a quick fix right now",
+            "Watch the cycle repeat once more, then name what triggers it"
+          ]);
+  } else if (isDecision) {
     action = posBias === "GO"
       ? pickVariant(cleanCards, [
           "A step forward may feel natural here, if it feels right",
@@ -2116,7 +2137,7 @@ function buildFortuneMetrics({ totalScore, riskScore, cleanCards, reversedFlags,
             "Letting this rest a little longer may reveal what isn't yet visible"
           ])
         : pickVariant(cleanCards, [
-            "A little more clarity may want to settle before this becomes clear",
+            "A little more may want to settle before this becomes clear",
             "The shape of the choice is still forming — give it room",
             "Something is still resolving underneath — patience reads more honest than action",
             "This sits in between right now — let it find its own edge"
@@ -2131,10 +2152,10 @@ function buildFortuneMetrics({ totalScore, riskScore, cleanCards, reversedFlags,
         ])
       : posBias === "HOLD_BACK"
         ? pickVariant(cleanCards, [
-            "This may speak more to patience and gentle self-care than to action",
+            "This may be a season for steadying rather than reaching outward",
             "Conserving energy may serve better than spending it outward right now",
-            "The flow asks for tending to your own ground, not reaching",
-            "A quieter season suits this — restore before re-engaging"
+            "A quieter stretch suits this — let things settle before re-engaging",
+            "Holding your ground reads stronger than pushing forward here"
           ])
         : pickVariant(cleanCards, [
             "This may be a time for watching and letting the direction settle on its own",
@@ -2287,9 +2308,13 @@ function buildFortuneMetrics({ totalScore, riskScore, cleanCards, reversedFlags,
     finalOracle,
     layers: {
       decision: {
-        position: posBias === "GO" ? (isDecision ? "Proceed" : "Act (Favorable)")
-          : posBias === "HOLD_BACK" ? (isDecision ? "Hold" : "Withhold (Protect)")
-            : (isDecision ? "Deliberate" : "Observe (Wait)"),
+        position: isReflectionQ
+          ? (posBias === "GO" ? "Shift the pattern"
+            : posBias === "HOLD_BACK" ? "Notice & observe"
+              : "Let it surface")
+          : posBias === "GO" ? (isDecision ? "Proceed" : "Act (Favorable)")
+            : posBias === "HOLD_BACK" ? (isDecision ? "Hold" : "Withhold (Protect)")
+              : (isDecision ? "Deliberate" : "Observe (Wait)"),
         strategy: action,
         diagnosis: isDecision ? `The cards weigh this choice as ${trend}.` : `The current flow is ${trend}.`,
         outcomePrediction: closing
