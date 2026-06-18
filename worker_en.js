@@ -3648,7 +3648,16 @@ const LOVE_DIRECTIVE = {
 // formulaic ones. These need a querent-centered but CONCRETE answer, not generic self-help.
 function isSelfReflectionQuestion(prompt) {
   const p = (prompt || '').toLowerCase();
+  if (isDreamQuestion(p)) return true;  // dream questions are inherently introspective
   return /\b(why (do|am|can'?t|does) i|why does .{0,30} affect me|am i (ignoring|seeking|being|making|seeing|seeing this|avoiding|chasing|settling|sabotaging)|what (keeps|makes|holds) me|what (emotional |subconscious |hidden |inner )?(wound|belief|fear|pattern|habit)\b|what .{0,30}(sabotage|sabotages|holds me back|limits me|limits my)|what happens if i (stop|keep|leave|stay)|do i (really|actually|truly)|am i .{0,30}(or|from) )\b/.test(p);
+}
+
+// Dream questions are a special reflection subtype: symbolic emotional processing,
+// NOT external prophecy or future prediction.
+function isDreamQuestion(prompt) {
+  const p = (prompt || '').toLowerCase();
+  return /\b(dream|dreams|dreamt|dreaming|nightmare|nightmares|recurring dream|vivid dream)\b/.test(p) ||
+         /\bin my (sleep|dreams)\b/.test(p);
 }
 
 // Concrete-reflection guidance appended for self-reflection questions in any domain.
@@ -3667,20 +3676,30 @@ const REFLECTION_CHAIN_LOVE =
 const REFLECTION_CHAIN_WHY =
   `TRACE THE FULL CHAIN: Do NOT stop at describing the behavior — that only holds up a mirror. For "why do I hesitate / fear / keep avoiding" questions, trace: trigger → the specific fear driving it → the behavior → the consequence. Name the fear concretely and surprisingly, not generically. Example: "When a real chance appears, you measure it against an imagined perfect version. The fear isn't failure — it's committing to something that might close off a better option later. So you find a flaw, step back, and wait. That protects you from regret, but it also kills momentum." The fear is the answer the reader came for. `;
 
+// Dream reflection: symbolic emotional processing, never prophecy.
+const REFLECTION_CHAIN_DREAM =
+  `DREAM MODE: Treat the dream as the mind's symbolic processing of waking emotion — NOT a prophecy, omen, sign from the universe, or prediction of future events. Never say a dream "foretells", "warns of what's coming", or "is a message". ` +
+  `Read the three cards as layers of what the dream is working through: PAST card = the unresolved tension or experience feeding the dream; PRESENT card = the emotion currently being processed or replayed in sleep; FUTURE card = what integrating or facing this would look like in waking life. ` +
+  `Anchor in concrete waking-life referents: what real situation, relationship, or avoided feeling does this emotional residue connect to? Name it. ` +
+  `The intensity of a dream usually points to something felt but not yet acknowledged while awake — surface that, concretely, without mysticism. `;
+
 const REFLECTION_GUIDANCE_END =
   `Do NOT use generic self-help ("honor your worth", "trust the journey", "true security comes from within", "your subconscious believes..."). ` +
   `End with ONE concrete behavioral change to try — not an abstract affirmation. Example: "Start asking for a clear answer instead of reading into silence" — not "learn to value yourself". `;
 
 // Compose domain-appropriate reflection guidance.
-function reflectionGuidance(domain) {
-  const chain = (domain === 'love') ? REFLECTION_CHAIN_LOVE : REFLECTION_CHAIN_WHY;
+function reflectionGuidance(domain, prompt) {
+  let chain;
+  if (isDreamQuestion(prompt)) chain = REFLECTION_CHAIN_DREAM;
+  else if (domain === 'love') chain = REFLECTION_CHAIN_LOVE;
+  else chain = REFLECTION_CHAIN_WHY;
   return REFLECTION_GUIDANCE_BASE + chain + REFLECTION_GUIDANCE_END;
 }
 
 function buildSystemPromptEN(domain, subjectName, relationshipState, loveSubtype, oracleStyle, prompt) {
   const subject = subjectName || 'this asset';
   const isReflectionQ = isSelfReflectionQuestion(prompt);
-  const REFLECTION_GUIDANCE = reflectionGuidance(domain);
+  const REFLECTION_GUIDANCE = reflectionGuidance(domain, prompt);
   const relationshipEngineInstruction = relationshipState
     ? `Relationship context (if relevant): type=${relationshipState.relationshipType}, emotional intensity=${relationshipState.emotionalIntensity}.`
     : '';
