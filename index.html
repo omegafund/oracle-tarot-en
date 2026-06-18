@@ -1511,7 +1511,7 @@ async function streamReading(question, drawn, reversed) {
 }
 
 // ── Render stream text ──
-function renderStreamText(text) {
+function renderStreamText(text, isFinal) {
     const sectionColors = {
         'Past':            '#F39C12',
         'Present':         '#3498DB',
@@ -1562,6 +1562,19 @@ function renderStreamText(text) {
     } else if (/CLOSING_START/.test(html)) {
         html = html.replace(/CLOSING_START[\s\S]*$/, '').trim();
     }
+    // Safety: if the body (after marker removal) ends mid-sentence — e.g. Gemini broke
+    // off the body to start an end block — trim the dangling fragment back to the last
+    // complete sentence so the reading never ends on "...tension in".
+    // ONLY on final render (isFinal), never mid-stream (would cause flicker).
+    if (isFinal) {
+        const _stripped = html.replace(/<[^>]+>/g, '').trim();
+        if (_stripped.length > 150 && !/[.!?"'”’)]$/.test(html.trim())) {
+            const lastEnd = Math.max(html.lastIndexOf('.'), html.lastIndexOf('!'), html.lastIndexOf('?'));
+            if (lastEnd > html.length * 0.5) {
+                html = html.slice(0, lastEnd + 1).trim();
+            }
+        }
+    }
     // Replace section headers
     Object.entries(sectionColors).forEach(([label, color]) => {
         const re = new RegExp(`(^|\\n)(${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})\\n`, 'g');
@@ -1583,6 +1596,11 @@ function renderStreamText(text) {
 // ── On stream complete ──
 // ── On stream complete ──
 function onStreamComplete(fullText) {
+    // Final body render with fragment-trim safety (isFinal=true).
+    const _contentEl = document.getElementById('stream-content');
+    if (_contentEl && fullText) {
+        try { _contentEl.innerHTML = renderStreamText(fullText, true); } catch (_) {}
+    }
     // Layer 2: gentle dependency note appended below the reading (non-blocking).
     if (window._dependencyNote) {
         const contentEl = document.getElementById('stream-content');
