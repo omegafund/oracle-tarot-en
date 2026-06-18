@@ -1568,10 +1568,17 @@ function renderStreamText(text, isFinal) {
     // ONLY on final render (isFinal), never mid-stream (would cause flicker).
     if (isFinal) {
         const _stripped = html.replace(/<[^>]+>/g, '').trim();
-        if (_stripped.length > 150 && !/[.!?"'”’)]$/.test(html.trim())) {
+        if (_stripped.length > 80 && !/[.!?"'”’)]$/.test(html.trim())) {
             const lastEnd = Math.max(html.lastIndexOf('.'), html.lastIndexOf('!'), html.lastIndexOf('?'));
             if (lastEnd > html.length * 0.5) {
+                // Preferred: trim back to the last complete sentence ("...purpose.").
                 html = html.slice(0, lastEnd + 1).trim();
+            } else {
+                // Fallback: drop the dangling final word and close with a period
+                // ("...purpose, rather than" -> "...purpose, rather.") so it never
+                // ends mid-word, even when no nearby sentence boundary exists.
+                html = html.trim().replace(/[\s,;:]*\S*$/, '').trim();
+                if (html && !/[.!?]$/.test(html)) html += '.';
             }
         }
     }
