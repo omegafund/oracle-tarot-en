@@ -2065,7 +2065,7 @@ CLOSING_START
 [1 closing line 10-25 words — grounded observation, not emotional restatement]
 CLOSING_END
 
-CRITICAL: Write the full reading FIRST, then END BLOCKS. Do NOT start with GUIDE_START.`;
+CRITICAL: Write the full reading FIRST, then END BLOCKS. Do NOT start with GUIDE_START. The final sentence of the main reading MUST be complete (end with a period) BEFORE you write GUIDE_START. Never break off the body mid-sentence to start the end blocks.`;
 
 function pickVariant(cleanCards, variants) {
   let h = 0;
@@ -4308,38 +4308,8 @@ export default {
               }
             }
 
-            // Truncation guard: if narration ended mid-sentence (no terminal punctuation)
-            // and is substantial, generate a short completion and stream it as continuation.
-            const _tail = accumulatedText.trim();
-            const _truncated = _tail.length > 120 && !/[.!?"'”’)]$/.test(_tail);
-            if (_truncated) {
-              console.log('TRUNCATION_GUARD: incomplete ending, requesting completion. tail:', _tail.slice(-60));
-              try {
-                const contUrl = geminiUrl.replace(':streamGenerateContent', ':generateContent').replace('alt=sse&', '');
-                const contBody = {
-                  contents: [{ role: 'user', parts: [{ text:
-                    `Continue and finish this reading naturally from exactly where it stops. Write only the missing remainder (1-2 sentences) to complete the final thought. Do not repeat what is already written. Do not add headers or new sections.\n\n---\n${_tail.slice(-600)}` }] }],
-                  generationConfig: { temperature: 0.7, maxOutputTokens: 256 }
-                };
-                const contResp = await fetch(contUrl, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(contBody)
-                });
-                if (contResp.ok) {
-                  const contJson = await contResp.json();
-                  let contText = contJson?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '';
-                  contText = domain === 'stock' ? sanitizeWealthText(contText) : contText;
-                  contText = contText.trim();
-                  if (contText) {
-                    const sep = /\s$/.test(accumulatedText) ? '' : ' ';
-                    send({ _type: 'token', text: sep + contText });
-                  }
-                }
-              } catch (ce) {
-                console.log('TRUNCATION_GUARD completion failed:', ce.message);
-              }
-            }
+            // (Truncation handling moved to client-side marker parsing — the raw
+            //  stream contains END BLOCK markers, so a raw-tail check here misfires.)
 
             if (dependencyNote) {
               send({ _type: 'dependency_note', text: dependencyNote });
