@@ -2399,6 +2399,7 @@ function runStockEngine(ctx) {
 function runWealthEngine(ctx) {
   const { totalScore, riskScore, cleanCards, reversedFlags, prompt } = ctx;
   const revFlags = reversedFlags || [false, false, false];
+  const isReflectionQ = typeof isSelfReflectionQuestion === 'function' && isSelfReflectionQuestion(prompt);
 
   // The subject is abstracted toward inner value & self-worth, away from
   // anything resembling a specific asset, market, or financial instrument.
@@ -2429,7 +2430,13 @@ function runWealthEngine(ctx) {
     GUARDED: "This may be a time to consolidate what you have built before taking on more.",
     CONTRACTING: "This may be a season for steadying your footing rather than pushing for more."
   };
-  const action = ACTION_LABEL[energyKey];
+  const action = isReflectionQ
+    ? (totalScore >= 2
+        ? "Naming the pattern is the opening — one different choice can follow it."
+        : totalScore <= -2
+          ? "This asks for honest observation of the pattern before any change."
+          : "Let the pattern come into focus before acting on it.")
+    : ACTION_LABEL[energyKey];
 
   // Risk reframed as "turbulence", purely symbolic.
   let riskLevel = "steady";
@@ -2483,6 +2490,16 @@ function runWealthEngine(ctx) {
       "Worth sits in a quiet middle place — naming what genuinely matters is what tips it.",
       "Inner value rests in stillness — the next definition comes from honesty, not effort.",
       "There is a pause in the pattern of self-worth — what you choose to honor will shape what follows."
+    ]);
+  }
+
+  // Reflection questions get a domain-neutral signal — no self-worth/abundance framing.
+  if (isReflectionQ) {
+    flowSummary = pickVariant(cleanCards, [
+      "The pattern is visible now — what you do with it next is the real opening.",
+      "Seeing the cycle clearly is the shift; the next move follows from naming it.",
+      "This sits at a turning point — recognizing the pattern matters more than rushing past it.",
+      "The recognition itself is the movement here — the rest follows once it's named."
     ]);
   }
 
@@ -2542,7 +2559,11 @@ function runWealthEngine(ctx) {
     disclaimer: "Inner Abundance readings are symbolic reflections on self-worth and personal values, for entertainment and self-insight only. They are not financial, investment, or trading advice, and do not reference any specific security.",
     layers: {
       decision: {
-        position: `Inner abundance: ${trend}`,
+        position: isReflectionQ
+          ? (totalScore >= 2 ? "Shift the pattern"
+            : totalScore <= -2 ? "Notice & observe"
+              : "Let it surface")
+          : `Inner abundance: ${trend}`,
         strategy: action,
         diagnosis: `The energy around ${subjectName} currently reads as ${trend}.`,
         cardEvidence: `${cardNarrative[1] || '-'} -> ${cardNarrative[2] || '-'}`,
