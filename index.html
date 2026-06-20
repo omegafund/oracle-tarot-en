@@ -1589,9 +1589,14 @@ function renderStreamText(text, isFinal) {
     });
     // Repair glued paragraphs: Gemini sometimes omits the blank line between
     // Past/Present/Future, producing "value.Presently". Insert a paragraph break
-    // when a sentence-ending punctuation is immediately followed (no space) by a
-    // known capitalized paragraph-opener.
-    html = html.replace(/([.!?])(Presently|Currently|Now,|Now |Looking ahead|Looking forward|Moving forward|Ahead,|In the past|Today,|The path ahead|The dream)/g, '$1\n\n$2');
+    // before a known capitalized paragraph-opener when glued to a sentence end.
+    // Lookahead keeps the opener intact and only matches at paragraph-start phrasing.
+    const _starters = ['Presently', 'Currently', 'Now', 'At present', 'In the present',
+      'Looking ahead', 'Looking forward', 'Moving forward', 'Going forward',
+      'In the future', 'Ahead', 'Soon', 'Later', 'In the past', 'Previously',
+      'The path ahead', 'The future', 'The dream', 'Your dreams'];
+    const _starterRe = new RegExp(`([a-z][.!?])(?=(?:${_starters.join('|')})\\b)`, 'g');
+    html = html.replace(_starterRe, '$1\n\n');
 
     // Blank line (paragraph break) → visible paragraph spacing.
     // Single newline → line break. This makes past/present/future read as
