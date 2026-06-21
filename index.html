@@ -1452,9 +1452,15 @@ async function streamReading(question, drawn, reversed) {
                             const el = document.getElementById(id);
                             if (el) el.style.display = 'none';
                         });
+                        // Trial users who ran out get a clear path to a paid plan;
+                        // paid users just see the "come back tomorrow" note.
+                        const _upgradeCTA = parsed.upgradable
+                            ? `<button onclick="showPaywall('Choose a plan to keep going')" style="margin-top:22px;padding:14px 30px;background:linear-gradient(135deg,#C9A227,#E8C766);color:#1a1a1a;border:none;border-radius:10px;font-size:1rem;font-weight:600;cursor:pointer;box-shadow:0 4px 14px rgba(201,162,39,0.3);">✦ See plans</button>`
+                            : '';
                         contentEl.innerHTML = `<div style="padding:32px 24px;text-align:center;line-height:1.8;">
                             <div style="font-size:1.5rem;margin-bottom:16px;">🌙</div>
                             <div style="font-size:1.05rem;color:#F1C40F;max-width:480px;margin:0 auto;">${parsed.message}</div>
+                            ${_upgradeCTA}
                         </div>`;
                         metricsReceived = true;
                         continue;
