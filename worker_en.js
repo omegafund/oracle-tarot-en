@@ -3670,7 +3670,7 @@ const LOVE_DIRECTIVE = {
 function isSelfReflectionQuestion(prompt) {
   const p = (prompt || '').toLowerCase();
   if (isDreamQuestion(p)) return true;  // dream questions are inherently introspective
-  return /\b(why (do|am|can'?t|does) i|why does .{0,30} affect me|am i (ignoring|seeking|being|making|seeing|seeing this|avoiding|chasing|settling|sabotaging)|what (keeps|makes|holds) me|what (emotional |subconscious |hidden |inner )?(wound|belief|fear|pattern|habit)\b|what .{0,30}(sabotage|sabotages|holds me back|limits me|limits my)|what happens if i (stop|keep|leave|stay)|do i (really|actually|truly)|am i .{0,30}(or|from) )\b/.test(p);
+  return /\b(why (do|am|can'?t|does) i|why does .{0,30} affect me|am i (ignoring|seeking|being|making|seeing|seeing this|avoiding|chasing|settling|sabotaging)|what (keeps|makes|holds) me|what (emotional |subconscious |hidden |inner )?(wound|belief|fear|pattern|habit|attachment|block)\b|what('?s| is| keeps| has been) .{0,40}(clouding|blocking|preventing|stopping|holding|driving|causing|sabotaging|limiting|getting in the way)|what .{0,30}(sabotage|sabotages|holds me back|limits me|limits my)|what (emotional|inner|subconscious|hidden|unconscious) .{0,30}(am i|do i|is|keeps|clouds|drives|blocks)|what happens if i (stop|keep|leave|stay)|do i (really|actually|truly)|am i .{0,30}(or|from) )\b/.test(p);
 }
 
 // Dream questions are a special reflection subtype: symbolic emotional processing,
