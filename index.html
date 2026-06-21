@@ -1267,7 +1267,6 @@ function renderCrisisHTML(message) {
 async function startReading() {
     const q = document.getElementById('question-input').value.trim();
     if (!q) { document.getElementById('question-input').focus(); return; }
-    window._lastQuestion = q;  // kept for the shareable reading card
 
     // SAFETY: crisis pre-check BEFORE drawing any cards. If detected, show the
     // supportive screen and stop — no cards are ever drawn or shown.
@@ -1635,7 +1634,6 @@ function onStreamComplete(fullText) {
             if (mb) {
                 mb.innerHTML = mHtml;
                 mb.style.setProperty('display', 'block', 'important');
-                try { renderShareButton(SERVER_METRICS); } catch (e) {}
             }
         }
     }
@@ -1646,25 +1644,19 @@ function onStreamComplete(fullText) {
         const proBox = document.getElementById('pro-unlock');
         if (proBox) proBox.style.display = 'none';
     } else if (isPremium() && !SERVER_METRICS?.layers) {
-        // layers can arrive slightly after `done` — poll a few times instead of once.
-        let _tries = 0;
-        const _layerPoll = setInterval(() => {
-            _tries++;
+        // Metrics may arrive slightly after done — retry once after short delay
+        setTimeout(() => {
             if (SERVER_METRICS?.layers) {
-                clearInterval(_layerPoll);
                 renderDecisionLayersEN(SERVER_METRICS.layers);
                 const mb = document.getElementById('metrics-box');
                 if (mb && SERVER_METRICS) {
                     const mHtml = renderMetricsEN(SERVER_METRICS);
-                    if (mHtml) { mb.innerHTML = mHtml; mb.style.setProperty('display','block','important'); try { renderShareButton(SERVER_METRICS); } catch (e) {} }
+                    if (mHtml) { mb.innerHTML = mHtml; mb.style.setProperty('display','block','important'); }
                 }
-                const proBox = document.getElementById('pro-unlock');
-                if (proBox) proBox.style.display = 'none';
-            } else if (_tries >= 15) {
-                // ~3s elapsed with no layers — give up gracefully.
-                clearInterval(_layerPoll);
             }
-        }, 200);
+            const proBox = document.getElementById('pro-unlock');
+            if (proBox) proBox.style.display = 'none';
+        }, 300);
     } else if (!isPremium()) {
         const proBox = document.getElementById('pro-unlock');
         if (proBox) proBox.style.display = '';
@@ -2009,212 +2001,8 @@ function renderDecisionLayersEN(layers) {
         }
     }
 
-    return html;
-}
-
-// Build a shareable reading card (canvas image) and wire up share/download.
-// This is the organic growth engine: every shared card carries the brand + URL.
-function renderShareButton(m) {
-    const el = document.getElementById('metrics-box');
-    if (!el) return;
-    if (document.getElementById('zeus-share-wrap')) return; // avoid dupes
-
-    const wrap = document.createElement('div');
-    wrap.id = 'zeus-share-wrap';
-    wrap.style.cssText = 'margin-top:20px;text-align:center;';
-    wrap.innerHTML =
-        '<button id="zeus-share-btn" style="background:linear-gradient(135deg,#C9A227,#E8C766);color:#1a1a1a;border:none;padding:13px 26px;border-radius:10px;font-size:0.95rem;font-weight:600;cursor:pointer;letter-spacing:0.3px;box-shadow:0 4px 14px rgba(201,162,39,0.3);">✦ Share this reading</button>' +
-        '<div id="zeus-share-hint" style="margin-top:8px;font-size:0.78rem;color:rgba(255,255,255,0.4);">Save as an image or share to your story</div>';
-    el.appendChild(wrap);
-
-    document.getElementById('zeus-share-btn').addEventListener('click', () => shareReading(m));
-}
-
-async function shareReading(m) {
-    const btn = document.getElementById('zeus-share-btn');
-    if (btn) { btn.textContent = '✦ Creating image…'; btn.disabled = true; }
-    try {
-        const question = (window._lastQuestion || '').trim();
-        const position = (m && m.layers && m.layers.decision && m.layers.decision.position) || '';
-
-        // Pick the punchiest one-liner: prefer Deep Interpretation / AI closing,
-        // then Risk line, then Signal line. Favor the shortest, cap at 140 chars.
-        const candidates = [];
-        if (window._aiClosing && typeof window._aiClosing === 'string') {
-            candidates.push(window._aiClosing.trim().replace(/^[•\-*]\s*/, ''));
-        }
-        if (m && m.layers) {
-            const risk = m.layers.decision && m.layers.decision.outcomePrediction;
-            const sig = m.layers.signal && m.layers.signal.summary;
-            if (risk) candidates.push(String(risk).trim());
-            if (sig) candidates.push(String(sig).trim());
-        }
-        let oneLine = '';
-        const usable = candidates.filter(c => c && c.length >= 20 && c.length <= 140);
-        if (usable.length) {
-            usable.sort((a, b) => a.length - b.length); // shortest, punchiest first
-            oneLine = usable[0];
-        } else if (candidates.length) {
-            // fall back: truncate the first candidate cleanly at a word boundary
-            oneLine = candidates[0].slice(0, 137).replace(/\s+\S*$/, '') + '…';
-        }
-
-        const cards = (typeof CURRENT_DRAWN_CARDS !== 'undefined' ? CURRENT_DRAWN_CARDS : []).slice(0, 3);
-        const reversed = (typeof CURRENT_REVERSED !== 'undefined' ? CURRENT_REVERSED : []).slice(0, 3);
-        const blob = await buildShareCard({ question, position, oneLine, cards, reversed });
-        const file = new File([blob], 'zeus-oracle-reading.png', { type: 'image/png' });
-
-        // Prefer native share sheet (mobile) with the image; fall back to download.
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-                files: [file],
-                title: 'My ZEUS Oracle Reading',
-                text: 'This hit harder than I expected. See what you\'re not seeing — en.zeustarot.com'
-            });
-        } else {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = 'zeus-oracle-reading.png';
-            document.body.appendChild(a); a.click(); a.remove();
-            setTimeout(() => URL.revokeObjectURL(url), 4000);
-        }
-    } catch (e) {
-        // silent — sharing is best-effort
-    } finally {
-        if (btn) { btn.textContent = '✦ Share this reading'; btn.disabled = false; }
-    }
-}
-
-// Draws a 1080x1350 (portrait, story/pin friendly) branded card on canvas.
-function buildShareCard({ question, position, oneLine, cards, reversed }) {
-    return new Promise((resolve) => {
-        const W = 1080, H = 1350;
-        const c = document.createElement('canvas');
-        c.width = W; c.height = H;
-        const ctx = c.getContext('2d');
-
-        // Background — deep night gradient.
-        const bg = ctx.createLinearGradient(0, 0, W, H);
-        bg.addColorStop(0, '#0d0d14');
-        bg.addColorStop(0.55, '#171622');
-        bg.addColorStop(1, '#0d0d14');
-        ctx.fillStyle = bg;
-        ctx.fillRect(0, 0, W, H);
-
-        // Subtle gold frame.
-        ctx.strokeStyle = 'rgba(201,162,39,0.35)';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(48, 48, W - 96, H - 96);
-
-        const cx = W / 2;
-        const wrapText = (text, maxWidth, font) => {
-            ctx.font = font;
-            const words = (text || '').split(/\s+/);
-            const lines = []; let line = '';
-            for (const w of words) {
-                const test = line ? line + ' ' + w : w;
-                if (ctx.measureText(test).width > maxWidth && line) { lines.push(line); line = w; }
-                else line = test;
-            }
-            if (line) lines.push(line);
-            return lines;
-        };
-
-        // Brand mark (top).
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#E8C766';
-        ctx.font = '600 34px Georgia, serif';
-        ctx.fillText('⚡ ZEUS ORACLE', cx, 122);
-        ctx.fillStyle = 'rgba(255,255,255,0.45)';
-        ctx.font = '400 21px Georgia, serif';
-        ctx.fillText('AI INSIGHT & REFLECTION', cx, 158);
-
-        // Question (the hook).
-        let y = 258;
-        if (question) {
-            ctx.fillStyle = 'rgba(255,255,255,0.5)';
-            ctx.font = 'italic 400 24px Georgia, serif';
-            ctx.fillText('You asked', cx, y);
-            y += 46;
-            ctx.fillStyle = '#ffffff';
-            const qLines = wrapText('“' + question + '”', W - 220, '500 38px Georgia, serif');
-            ctx.font = '500 38px Georgia, serif';
-            for (const ln of qLines.slice(0, 3)) { ctx.fillText(ln, cx, y); y += 50; }
-        }
-
-        // Three cards — Past • Present • Future (tarot authenticity).
-        const labels = ['PAST', 'PRESENT', 'FUTURE'];
-        const cardList = (cards && cards.length) ? cards : [];
-        if (cardList.length === 3) {
-            y += 40;
-            const colW = (W - 160) / 3;
-            const startX = 80;
-            for (let i = 0; i < 3; i++) {
-                const colCx = startX + colW * i + colW / 2;
-                // mini card frame
-                const cardW = 150, cardH = 230;
-                const cardX = colCx - cardW / 2, cardY = y;
-                const grad = ctx.createLinearGradient(cardX, cardY, cardX, cardY + cardH);
-                grad.addColorStop(0, 'rgba(201,162,39,0.18)');
-                grad.addColorStop(1, 'rgba(29,158,117,0.12)');
-                ctx.fillStyle = grad;
-                ctx.fillRect(cardX, cardY, cardW, cardH);
-                ctx.strokeStyle = 'rgba(232,199,102,0.55)';
-                ctx.lineWidth = 1.5;
-                ctx.strokeRect(cardX, cardY, cardW, cardH);
-                // star glyph in card
-                ctx.fillStyle = 'rgba(232,199,102,0.6)';
-                ctx.font = '46px Georgia, serif';
-                ctx.fillText('✦', colCx, cardY + cardH / 2 + 4);
-                if (reversed && reversed[i]) {
-                    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-                    ctx.font = '400 16px Georgia, serif';
-                    ctx.fillText('↓ reversed', colCx, cardY + cardH - 16);
-                }
-                // position label
-                ctx.fillStyle = '#E8C766';
-                ctx.font = '600 20px Georgia, serif';
-                ctx.fillText(labels[i], colCx, cardY + cardH + 34);
-                // card name (wrapped, max 2 lines)
-                ctx.fillStyle = 'rgba(255,255,255,0.85)';
-                const nameLines = wrapText(cardList[i], colW - 8, '400 22px Georgia, serif');
-                ctx.font = '400 22px Georgia, serif';
-                let ny = cardY + cardH + 62;
-                for (const ln of nameLines.slice(0, 2)) { ctx.fillText(ln, colCx, ny); ny += 26; }
-            }
-            y += 230 + 130;
-        } else {
-            y += 50;
-        }
-
-        // Divider.
-        ctx.strokeStyle = 'rgba(201,162,39,0.4)';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.moveTo(cx - 90, y); ctx.lineTo(cx + 90, y); ctx.stroke();
-        y += 56;
-
-        // The one-line insight (the payoff that drives curiosity).
-        if (oneLine) {
-            ctx.fillStyle = '#E8C766';
-            ctx.font = '600 23px Georgia, serif';
-            ctx.fillText('THE MIRROR SHOWED', cx, y);
-            y += 48;
-            ctx.fillStyle = 'rgba(255,255,255,0.92)';
-            const iLines = wrapText(oneLine, W - 200, 'italic 400 32px Georgia, serif');
-            ctx.font = 'italic 400 32px Georgia, serif';
-            for (const ln of iLines.slice(0, 4)) { ctx.fillText(ln, cx, y); y += 44; }
-        }
-
-        // CTA + watermark footer (always present, bottom center).
-        ctx.fillStyle = '#E8C766';
-        ctx.font = '600 30px Georgia, serif';
-        ctx.fillText('See what you\'re not seeing', cx, H - 130);
-        ctx.fillStyle = 'rgba(255,255,255,0.7)';
-        ctx.font = '600 26px Georgia, serif';
-        ctx.fillText('⚡ Zeus Oracle · en.zeustarot.com', cx, H - 88);
-
-        c.toBlob((blob) => resolve(blob), 'image/png');
-    });
+    el.innerHTML = html;
+    el.style.display = '';
 }
 
 function goHome() {
