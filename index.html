@@ -1646,19 +1646,25 @@ function onStreamComplete(fullText) {
         const proBox = document.getElementById('pro-unlock');
         if (proBox) proBox.style.display = 'none';
     } else if (isPremium() && !SERVER_METRICS?.layers) {
-        // Metrics may arrive slightly after done — retry once after short delay
-        setTimeout(() => {
+        // layers can arrive slightly after `done` — poll a few times instead of once.
+        let _tries = 0;
+        const _layerPoll = setInterval(() => {
+            _tries++;
             if (SERVER_METRICS?.layers) {
+                clearInterval(_layerPoll);
                 renderDecisionLayersEN(SERVER_METRICS.layers);
                 const mb = document.getElementById('metrics-box');
                 if (mb && SERVER_METRICS) {
                     const mHtml = renderMetricsEN(SERVER_METRICS);
                     if (mHtml) { mb.innerHTML = mHtml; mb.style.setProperty('display','block','important'); try { renderShareButton(SERVER_METRICS); } catch (e) {} }
                 }
+                const proBox = document.getElementById('pro-unlock');
+                if (proBox) proBox.style.display = 'none';
+            } else if (_tries >= 15) {
+                // ~3s elapsed with no layers — give up gracefully.
+                clearInterval(_layerPoll);
             }
-            const proBox = document.getElementById('pro-unlock');
-            if (proBox) proBox.style.display = 'none';
-        }, 300);
+        }, 200);
     } else if (!isPremium()) {
         const proBox = document.getElementById('pro-unlock');
         if (proBox) proBox.style.display = '';
