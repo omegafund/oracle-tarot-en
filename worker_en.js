@@ -4096,9 +4096,10 @@ export default {
         const limitCheck = await checkDailyLimit(env, tokenPayload.jti, tokenPayload.plan, 'deep');
         if (!limitCheck.allowed) {
           const enc = new TextEncoder();
+          const _isTrialPlan = tokenPayload.plan === 'trial';
           const cdStream = new ReadableStream({
             start(controller) {
-              controller.enqueue(enc.encode(`data: ${JSON.stringify({ _type: 'cooldown', message: limitCheck.message })}\n\n`));
+              controller.enqueue(enc.encode(`data: ${JSON.stringify({ _type: 'cooldown', message: limitCheck.message, upgradable: _isTrialPlan })}\n\n`));
               controller.enqueue(enc.encode(`data: ${JSON.stringify({ _type: 'done' })}\n\n`));
               controller.close();
             }
