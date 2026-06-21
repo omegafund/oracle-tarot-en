@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://en.zeustarot.com/sitemap.xml
+Sitemap: https://en.zeustarot.com/sitemap.txt
