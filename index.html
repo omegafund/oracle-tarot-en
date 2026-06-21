@@ -1635,6 +1635,7 @@ function onStreamComplete(fullText) {
             if (mb) {
                 mb.innerHTML = mHtml;
                 mb.style.setProperty('display', 'block', 'important');
+                try { renderShareButton(SERVER_METRICS); } catch (e) {}
             }
         }
     }
@@ -1652,7 +1653,7 @@ function onStreamComplete(fullText) {
                 const mb = document.getElementById('metrics-box');
                 if (mb && SERVER_METRICS) {
                     const mHtml = renderMetricsEN(SERVER_METRICS);
-                    if (mHtml) { mb.innerHTML = mHtml; mb.style.setProperty('display','block','important'); }
+                    if (mHtml) { mb.innerHTML = mHtml; mb.style.setProperty('display','block','important'); try { renderShareButton(SERVER_METRICS); } catch (e) {} }
                 }
             }
             const proBox = document.getElementById('pro-unlock');
@@ -2002,11 +2003,7 @@ function renderDecisionLayersEN(layers) {
         }
     }
 
-    el.innerHTML = html;
-    el.style.display = '';
-
-    // ── UGC Share: let users share their reading as an image card ──
-    try { renderShareButton(m); } catch (e) {}
+    return html;
 }
 
 // Build a shareable reading card (canvas image) and wire up share/download.
