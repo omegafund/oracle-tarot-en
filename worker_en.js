@@ -3018,7 +3018,6 @@ const PLANS = {
   // yearly: 3 deep/day + 10 basic/day
   yearly:   { id: 'yearly',   durationMs: 365 * 24 * 60 * 60 * 1000,  deepPerDay: 3, basicPerDay: 10, priceCents: 5900 },
   // dev: unlimited readings for testing — never expose to real users
-  dev:      { id: 'dev',      durationMs: 365 * 24 * 60 * 60 * 1000,  deepPerDay: 999, basicPerDay: 999, priceCents: 0 }
 };
 function isValidPlan(plan) {
   return typeof plan === 'string' && Object.prototype.hasOwnProperty.call(PLANS, plan);
@@ -3175,7 +3174,6 @@ function _todayKey() {
 }
 async function checkDailyLimit(env, jti, plan, kind) {
   // Dev plan has no limits — for testing only
-  if (plan === 'dev') return { allowed: true, remaining: 999 };
   const kv = getKV(env);
   if (!kv || !jti) return { allowed: true, remaining: null }; // fail open
   const planDef = PLANS[plan] || PLANS.monthly;
@@ -3933,22 +3931,6 @@ export default {
 
     // 2) Test-mode unlock — issues a real signed token without payment.
     //    Frontend expects { ok: true, token }.
-    if (url.pathname === '/unlock-test' && request.method === 'POST') {
-      try {
-        const body = await request.json().catch(() => ({}));
-        const plan = (body && body.plan) || 'trial';
-        if (!isValidPlan(plan)) {
-          return new Response(JSON.stringify({ ok: false, error: 'Invalid plan' }),
-            { status: 400, headers: corsHeaders() });
-        }
-        const token = await issueToken(env, plan);
-        return new Response(JSON.stringify({ ok: true, token, plan, test_mode: true }),
-          { status: 200, headers: corsHeaders() });
-      } catch (err) {
-        return new Response(JSON.stringify({ ok: false, error: err.message }),
-          { status: 500, headers: corsHeaders() });
-      }
-    }
 
     // 3) Verify a completed Creem payment via the signed return-URL params.
     //    Frontend collects all query params from the success redirect and POSTs them here.
@@ -4393,21 +4375,6 @@ export default {
 
     // ---- Health / config check ----
     // ---- Dev: reset daily limits (delete all daily_deep KV keys) ----
-    if (url.pathname === '/dev-reset' && request.method === 'POST') {
-      const kv = getKV(env);
-      if (!kv) return new Response(JSON.stringify({ ok: false, error: 'KV not bound' }), { status: 500, headers: corsHeaders() });
-      try {
-        const list = await kv.list({ prefix: 'daily_deep:' });
-        const keys = list.keys.map(k => k.name);
-        await Promise.all(keys.map(k => kv.delete(k)));
-        // Also delete active_en keys
-        const active = await kv.list({ prefix: 'active_en:' });
-        await Promise.all(active.keys.map(k => kv.delete(k.name)));
-        return new Response(JSON.stringify({ ok: true, deleted: keys.length + active.keys.length, keys }), { status: 200, headers: corsHeaders() });
-      } catch (err) {
-        return new Response(JSON.stringify({ ok: false, error: err.message }), { status: 500, headers: corsHeaders() });
-      }
-    }
 
     if (url.pathname === '/health') {
       return new Response(JSON.stringify({
