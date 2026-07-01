@@ -3858,7 +3858,7 @@ async function generatePastOnlyEN(apiKey, domain, subject, card, isReversed, que
   const bodyReq = JSON.stringify({
     system_instruction: { parts: [{ text: sys }] },
     contents: [{ role: 'user', parts: [{ text: usr }] }],
-    generationConfig: { temperature: 0.85, maxOutputTokens: 320 },
+    generationConfig: { temperature: 0.85, maxOutputTokens: 700, thinkingConfig: { thinkingBudget: 0 } },
     safetySettings: [
       { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
       { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
