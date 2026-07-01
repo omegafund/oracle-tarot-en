@@ -907,6 +907,18 @@ async function handlePayment(plan = 'monthly') {
         const checkoutData = await checkoutRes.json();
 
         if (checkoutData.url && !checkoutData.test_mode) {
+            // Persist current reading so the SAME cards can be revealed after returning from Creem.
+            try {
+                if (Array.isArray(CURRENT_DRAWN_CARDS) && CURRENT_DRAWN_CARDS.length === 3) {
+                    localStorage.setItem('zeus_pending_reading', JSON.stringify({
+                        question: window._lastQuestion || '',
+                        drawn:    CURRENT_DRAWN_CARDS,
+                        reversed: CURRENT_REVERSED,
+                        domain:   CURRENT_DOMAIN,
+                        ts:       Date.now()
+                    }));
+                }
+            } catch (e) { /* non-fatal */ }
             window.location.href = checkoutData.url;
             return;
         }
@@ -972,7 +984,26 @@ async function checkPaymentOnReturn() {
             const data = await res.json();
             if (data.ok && data.token) {
                 unlockPremium(data.plan, data.token);
-                alert('✅ Payment successful! Premium activated.');
+                alert('\u2705 Payment successful! Premium activated.');
+                // Reveal the SAME reading previewed before paying (identical cards).
+                try {
+                    const _raw = localStorage.getItem('zeus_pending_reading');
+                    if (_raw) {
+                        const _p = JSON.parse(_raw);
+                        localStorage.removeItem('zeus_pending_reading');
+                        if (_p && _p.ts && (Date.now() - _p.ts) < 60 * 60 * 1000
+                            && Array.isArray(_p.drawn) && _p.drawn.length === 3) {
+                            CURRENT_DOMAIN      = _p.domain || CURRENT_DOMAIN;
+                            CURRENT_DRAWN_CARDS = _p.drawn;
+                            CURRENT_REVERSED    = Array.isArray(_p.reversed) ? _p.reversed : _p.drawn.map(function(){ return false; });
+                            window._lastQuestion = _p.question || '';
+                            window.history.replaceState({}, '', window.location.pathname);
+                            showResultScreen(_p.question || '', CURRENT_DRAWN_CARDS, CURRENT_REVERSED);
+                            await streamReading(_p.question || '', CURRENT_DRAWN_CARDS, CURRENT_REVERSED);
+                            return;
+                        }
+                    }
+                } catch (e) { console.warn('pending-reading revive failed:', e); }
             } else {
                 console.warn('Payment verification failed:', data.error);
             }
@@ -1321,19 +1352,23 @@ function showResultScreen(q, drawn, reversed) {
 
     // cards row
     const row = document.getElementById('cards-row');
+    const _freePreview = !isPremium();   // free users: Past visible, Present/Future blurred
     row.innerHTML = drawn.map((c, i) => {
         const idx = TAROT_CARDS_78.indexOf(c);
         const num = idx >= 0 ? String(idx).padStart(2, '0') : '00';
         const imgUrl = `https://omegafund.github.io/oracle-tarot-pro/images/cards/m${num}.jpg`;
+        const _locked  = _freePreview && i > 0;                 // Present(1) & Future(2)
+        const _itemCls = _locked ? 'card-item locked' : 'card-item';
+        const _gate    = _locked ? ' data-premium-gate' : '';
         return `
-        <div class="card-item">
+        <div class="${_itemCls}"${_gate}>
             <div class="card-label">${['Past','Present','Future'][i]}</div>
             <div class="card-img-wrap">
-                <img class="card-img${reversed[i] ? ' reversed' : ''}" src="${imgUrl}" alt="${c}" loading="lazy"
+                <img class="card-img${reversed[i] ? ' reversed' : ''}" src="${imgUrl}" alt="${_locked ? 'Hidden' : c}" loading="lazy"
                      onerror="this.style.display='none'">
             </div>
-            <div class="card-name">${c}</div>
-            ${reversed[i] ? '<div class="card-rev">↓ Reversed</div>' : ''}
+            <div class="card-name">${_locked ? '???' : c}</div>
+            ${(reversed[i] && !_locked) ? '<div class="card-rev">↓ Reversed</div>' : ''}
         </div>`;
     }).join('');
 
@@ -1834,8 +1869,32 @@ function onStreamComplete(fullText) {
             if (proBox) proBox.style.display = 'none';
         }, 300);
     } else if (!isPremium()) {
-        const proBox = document.getElementById('pro-unlock');
-        if (proBox) proBox.style.display = '';
+        // ── FREE PREVIEW ──────────────────────────────────────────────
+        // Show ONLY the Past card interpretation, then a fork: pay or go back.
+        // Present & Future cards stay blurred (set in showResultScreen).
+        // No AI reading is generated for free users (worker withholds it).
+        const _mb = document.getElementById('metrics-box');
+        if (_mb) _mb.style.display = 'none';                 // hide score teaser — Past-only preview
+        const _pro = document.getElementById('pro-unlock');
+        if (_pro) _pro.style.display = 'none';               // replaced by inline fork below
+        const _pastText = (SERVER_METRICS && Array.isArray(SERVER_METRICS.cardNarrative) && SERVER_METRICS.cardNarrative[0])
+            ? SERVER_METRICS.cardNarrative[0]
+            : 'Your past card sets the tone for everything that follows.';
+        const _ce = document.getElementById('stream-content');
+        if (_ce) {
+            _ce.innerHTML =
+                '<div style="margin-top:8px;padding:18px;border-left:3px solid rgba(241,196,15,0.55);background:rgba(241,196,15,0.06);border-radius:8px;line-height:1.75;color:#f4ecd6;">' +
+                    '<div style="font-size:0.82rem;letter-spacing:1px;color:#E8C766;margin-bottom:8px;">\u2726 THE PAST</div>' +
+                    _pastText +
+                '</div>' +
+                '<div style="margin-top:22px;text-align:center;color:rgba(255,255,255,0.55);font-style:italic;font-size:0.95rem;">' +
+                    'The present \u2014 and what unfolds next \u2014 remain hidden.' +
+                '</div>' +
+                '<div style="margin-top:18px;text-align:center;">' +
+                    '<button onclick="showPayModal()" style="padding:15px 32px;background:linear-gradient(135deg,#C9A227,#E8C766);color:#1a1a1a;border:none;border-radius:11px;font-size:1.02rem;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(201,162,39,0.35);letter-spacing:0.3px;">\u2726 Reveal what\u2019s still hidden</button>' +
+                    '<div style="margin-top:14px;"><button onclick="goHome()" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:0.9rem;cursor:pointer;text-decoration:underline;">\u2190 Ask another question</button></div>' +
+                '</div>';
+        }
     }
     // If paid, always hide PRO box regardless of reading state
     if (isPremium()) {
