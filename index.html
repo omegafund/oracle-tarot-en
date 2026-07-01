@@ -1877,9 +1877,12 @@ function onStreamComplete(fullText) {
         if (_mb) _mb.style.display = 'none';                 // hide score teaser — Past-only preview
         const _pro = document.getElementById('pro-unlock');
         if (_pro) _pro.style.display = 'none';               // replaced by inline fork below
-        const _pastText = (SERVER_METRICS && Array.isArray(SERVER_METRICS.cardNarrative) && SERVER_METRICS.cardNarrative[0])
-            ? SERVER_METRICS.cardNarrative[0]
+        var _rawPast = (typeof fullText === 'string' && fullText.trim().length > 10)
+            ? fullText.trim()
             : 'Your past card sets the tone for everything that follows.';
+        const _pastText = _rawPast
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/\n+/g, '<br>');
         const _ce = document.getElementById('stream-content');
         if (_ce) {
             _ce.innerHTML =
@@ -1888,7 +1891,7 @@ function onStreamComplete(fullText) {
                     _pastText +
                 '</div>' +
                 '<div style="margin-top:22px;text-align:center;color:rgba(255,255,255,0.55);font-style:italic;font-size:0.95rem;">' +
-                    'The present \u2014 and what unfolds next \u2014 remain hidden.' +
+                    'Your present and future cards are already waiting.' +
                 '</div>' +
                 '<div style="margin-top:18px;text-align:center;">' +
                     '<button onclick="showPayModal()" style="padding:15px 32px;background:linear-gradient(135deg,#C9A227,#E8C766);color:#1a1a1a;border:none;border-radius:11px;font-size:1.02rem;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(201,162,39,0.35);letter-spacing:0.3px;">\u2726 Reveal what\u2019s still hidden</button>' +
