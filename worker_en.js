@@ -3832,6 +3832,50 @@ function buildSystemPromptEN(domain, subjectName, relationshipState, loveSubtype
    Free tier gets a teaser: summary fields only.
    Paid tier (verified token) gets full layers + finalOracle + AI reading.
 ════════════════════════════════════════ */
+// ── FREE PREVIEW: dedicated PAST-ONLY interpreter ────────────────
+// Completely separate from the paid reading (does NOT reuse the paid prompt).
+// Interprets ONLY the past card as RECOGNITION — no future, no prediction,
+// no advice, no closure. Short (3-4 sentences). Non-streaming, tiny budget.
+async function generatePastOnlyEN(apiKey, domain, subject, card, isReversed, question) {
+  const rev = isReversed ? ' (reversed — its shadow tone is emphasized)' : '';
+  const sys =
+    "You are Zeus, a warm, perceptive oracle. Interpret ONLY the PAST card of a three-card reading.\n" +
+    "GOAL: help the querent RECOGNIZE something true about where they have been. Recognition only.\n" +
+    "RULES (strict):\n" +
+    "- Exactly 3 to 4 sentences.\n" +
+    "- Emotionally resonant, warm, second person (\"you\").\n" +
+    "- Grounded in the querent's actual question.\n" +
+    "- Interpret ONLY the past. NO reference to the present or future cards.\n" +
+    "- NO future implication, NO prediction, NO advice, NO closure or resolution.\n" +
+    "- Do NOT hint at what comes next. Name what was; do not resolve it.\n" +
+    "- No headings, no lists, no card-name recital. Just the paragraph.";
+  const usr =
+    `Past card: ${card}${rev}.\n` +
+    `Domain: ${domain}.\n` +
+    `Question: ${question}\n` +
+    `Write the past-only recognition now.`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  const bodyReq = JSON.stringify({
+    system_instruction: { parts: [{ text: sys }] },
+    contents: [{ role: 'user', parts: [{ text: usr }] }],
+    generationConfig: { temperature: 0.85, maxOutputTokens: 320 },
+    safetySettings: [
+      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
+    ]
+  });
+  try {
+    const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: bodyReq });
+    if (!resp.ok) return null;
+    const j = await resp.json();
+    const parts = j && j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts || [];
+    const text = parts.map(p => p.text || '').join('').trim();
+    return text || null;
+  } catch (_) { return null; }
+}
+
 function buildFreeMetrics(metrics) {
   // Keep only the non-premium "teaser" fields; drop the 5-layer analysis
   // and the long final oracle text.
@@ -4117,10 +4161,35 @@ export default {
             // Premium gate: paid users (verified token) get full metrics with
             // layers + finalOracle; free users get a stripped teaser and no AI reading.
             if (!paid) {
-              send({ _type: 'metrics', data: buildFreeMetrics(metrics) });
-              const teaser = `Your cards point to a ${metrics.trend} flow. ` +
-                `Unlock the full reading to reveal your complete oracle and the 5-layer decision analysis.`;
-              send({ _type: 'token', text: teaser });
+              // Strip per-card narratives from the free payload (present/future must not leak via devtools).
+              const _freeMetrics = buildFreeMetrics(metrics);
+              if (_freeMetrics) _freeMetrics.cardNarrative = undefined;
+              send({ _type: 'metrics', data: _freeMetrics });
+
+              // FREE PREVIEW: dedicated PAST-ONLY interpretation.
+              // Budget-capped SEPARATELY from the paid global budget so a free
+              // traffic spike can never exhaust the paid budget or trip SYSTEM_LOCK.
+              let pastText = null;
+              const _apiKey = env.GEMINI_API_KEY;
+              try {
+                const _kv = getKV(env);
+                const FREE_KEY = 'GLOBAL_DAILY_FREE_PREVIEW_EN';
+                const FREE_CAP = 2000; // tunable daily ceiling for free AI previews
+                const freeUsed = _kv ? parseInt(await _kv.get(FREE_KEY) || '0', 10) : 0;
+                if (_apiKey && freeUsed < FREE_CAP) {
+                  pastText = await generatePastOnlyEN(_apiKey, domain, subject, sc.cleanCards[0], sc.reversedFlags[0], prompt);
+                  if (pastText && _kv) {
+                    await _kv.put(FREE_KEY, String(freeUsed + 1), { expirationTtl: 86400 });
+                  }
+                }
+              } catch (_) { pastText = null; }
+              // Graceful fallback: template line if AI unavailable / capped / failed.
+              if (!pastText) {
+                pastText = (metrics.cardNarrative && metrics.cardNarrative[0])
+                  ? metrics.cardNarrative[0]
+                  : 'Your past card sets the tone for everything that follows.';
+              }
+              send({ _type: 'token', text: pastText });
               send({ _type: 'locked', reason: 'premium_required' });
               send({ _type: 'done' });
               controller.close();
