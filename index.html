@@ -948,6 +948,26 @@ async function handlePayment(plan = 'monthly') {
 
 // ══════════════════════════════════════════════════════════════════
 // ══════════════════════════════════════════════════════════════════
+function _showPayConfirmOverlay(msg) {
+    let ov = document.getElementById('pay-confirm-overlay');
+    if (!ov) {
+        ov = document.createElement('div');
+        ov.id = 'pay-confirm-overlay';
+        ov.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0a1512;color:#f4ecd6;text-align:center;padding:24px;font-size:1.1rem;';
+        ov.innerHTML = '<div style="font-size:2.2rem;color:#E8C766;margin-bottom:18px;">\u2726</div>' +
+                       '<div id="pay-confirm-msg" style="max-width:420px;line-height:1.6;"></div>' +
+                       '<div style="margin-top:20px;color:#E8C766;letter-spacing:3px;font-size:1.4rem;">\u00B7\u00B7\u00B7</div>';
+        document.body.appendChild(ov);
+    }
+    const m = ov.querySelector('#pay-confirm-msg');
+    if (m) m.textContent = msg;
+    ov.style.display = 'flex';
+}
+function _hidePayConfirmOverlay() {
+    const ov = document.getElementById('pay-confirm-overlay');
+    if (ov) ov.style.display = 'none';
+}
+
 async function checkPaymentOnReturn() {
     const params    = new URLSearchParams(window.location.search);
     const sessionId = params.get('session_id');
@@ -973,6 +993,7 @@ async function checkPaymentOnReturn() {
 
     // Creem signed return — collect ALL query params and let the worker verify the HMAC signature.
     if (creemReturn) {
+        _showPayConfirmOverlay('Confirming your payment\u2026');
         try {
             const allParams = {};
             for (const [k, v] of params.entries()) allParams[k] = v;
@@ -984,7 +1005,7 @@ async function checkPaymentOnReturn() {
             const data = await res.json();
             if (data.ok && data.token) {
                 unlockPremium(data.plan, data.token);
-                alert('\u2705 Payment successful! Premium activated.');
+                _showPayConfirmOverlay('Revealing your reading\u2026');
                 // Reveal the SAME reading previewed before paying (identical cards).
                 try {
                     const _raw = localStorage.getItem('zeus_pending_reading');
@@ -1000,6 +1021,7 @@ async function checkPaymentOnReturn() {
                             window.history.replaceState({}, '', window.location.pathname);
                             showResultScreen(_p.question || '', CURRENT_DRAWN_CARDS, CURRENT_REVERSED);
                             await streamReading(_p.question || '', CURRENT_DRAWN_CARDS, CURRENT_REVERSED);
+                            _hidePayConfirmOverlay();
                             return;
                         }
                     }
@@ -1008,6 +1030,7 @@ async function checkPaymentOnReturn() {
                 console.warn('Payment verification failed:', data.error);
             }
         } catch (e) { console.warn('verify-payment failed:', e); }
+        _hidePayConfirmOverlay();
         window.history.replaceState({}, '', window.location.pathname);
     }
 }
@@ -1500,6 +1523,19 @@ async function streamReading(question, drawn, reversed) {
                             const el = document.getElementById(id);
                             if (el) el.style.display = 'none';
                         });
+                        // Consistency with the free preview: blur Present & Future cards
+                        // (the deep interpretation is locked for this reading).
+                        (function(){
+                            const _items = document.querySelectorAll('#cards-row .card-item');
+                            [1, 2].forEach(function(i){
+                                if (_items[i]) {
+                                    _items[i].classList.add('locked');
+                                    _items[i].setAttribute('data-premium-gate', '');
+                                    const _nm = _items[i].querySelector('.card-name');
+                                    if (_nm) _nm.textContent = '???';
+                                }
+                            });
+                        })();
                         // Trial users who ran out get a clear path to a paid plan;
                         // paid users just see the "come back tomorrow" note.
                         const _upgradeCTA = parsed.upgradable
