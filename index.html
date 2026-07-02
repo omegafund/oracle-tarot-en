@@ -1020,8 +1020,8 @@ async function checkPaymentOnReturn() {
                             window._lastQuestion = _p.question || '';
                             window.history.replaceState({}, '', window.location.pathname);
                             showResultScreen(_p.question || '', CURRENT_DRAWN_CARDS, CURRENT_REVERSED);
+                            _hidePayConfirmOverlay(); // FIX-OVERLAY-ORDER v2
                             await streamReading(_p.question || '', CURRENT_DRAWN_CARDS, CURRENT_REVERSED);
-                            _hidePayConfirmOverlay();
                             return;
                         }
                     }
