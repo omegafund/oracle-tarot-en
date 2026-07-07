@@ -1020,7 +1020,7 @@ async function checkPaymentOnReturn() {
                             window._lastQuestion = _p.question || '';
                             window.history.replaceState({}, '', window.location.pathname);
                             showResultScreen(_p.question || '', CURRENT_DRAWN_CARDS, CURRENT_REVERSED);
-                            _hidePayConfirmOverlay(); // FIX-OVERLAY-ORDER v2
+                            _hidePayConfirmOverlay();
                             await streamReading(_p.question || '', CURRENT_DRAWN_CARDS, CURRENT_REVERSED);
                             return;
                         }
@@ -1744,6 +1744,7 @@ async function shareReading() {
         if (oneLine.length > 140) oneLine = oneLine.slice(0, 137).replace(/\s+\S*$/, '') + '…';
 
         const blob = await buildShareCard({ question, oneLine, cards, reversed });
+        if (!blob) return;   // build failed entirely — finally resets the button
         const file = new File([blob], 'zeus-oracle-reading.png', { type: 'image/png' });
 
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -1767,97 +1768,148 @@ async function shareReading() {
 }
 
 function buildShareCard({ question, oneLine, cards, reversed }) {
-    return new Promise((resolve) => {
-        const W = 1080, H = 1350;
-        const c = document.createElement('canvas');
-        c.width = W; c.height = H;
-        const ctx = c.getContext('2d');
+    const W = 1080, H = 1350;
+    const TAROT = (typeof TAROT_CARDS_78 !== 'undefined') ? TAROT_CARDS_78 : [];
 
-        const bg = ctx.createLinearGradient(0, 0, W, H);
-        bg.addColorStop(0, '#0d0d14'); bg.addColorStop(0.55, '#171622'); bg.addColorStop(1, '#0d0d14');
-        ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-        ctx.strokeStyle = 'rgba(201,162,39,0.35)'; ctx.lineWidth = 2;
-        ctx.strokeRect(48, 48, W - 96, H - 96);
+    // Preload the 3 real card images (crossOrigin so the canvas isn't tainted).
+    // Resolves to an Image, or null if it fails to load.
+    function loadImg(card) {
+        return new Promise((res) => {
+            const idx = TAROT.indexOf(card);
+            const num = idx >= 0 ? String(idx).padStart(2, '0') : '00';
+            const im = new Image();
+            im.crossOrigin = 'anonymous';
+            im.onload = () => res(im);
+            im.onerror = () => res(null);
+            im.src = `https://omegafund.github.io/oracle-tarot-pro/images/cards/m${num}.jpg`;
+        });
+    }
+    const cardList = (cards || []).slice(0, 3);
 
-        const cx = W / 2;
-        const wrapText = (text, maxWidth, font) => {
-            ctx.font = font;
-            const words = (text || '').split(/\s+/);
-            const lines = []; let line = '';
-            for (const w of words) {
-                const test = line ? line + ' ' + w : w;
-                if (ctx.measureText(test).width > maxWidth && line) { lines.push(line); line = w; }
-                else line = test;
-            }
-            if (line) lines.push(line);
-            return lines;
-        };
+    return Promise.all(cardList.map(loadImg)).then((imgs) => new Promise((resolve) => {
+        // render(useImages): draws the full share card. If useImages is false,
+        // cards fall back to the ✦ placeholder (used if the canvas would taint).
+        function render(useImages) {
+            const c = document.createElement('canvas');
+            c.width = W; c.height = H;
+            const ctx = c.getContext('2d');
 
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#E8C766'; ctx.font = '600 34px Georgia, serif';
-        ctx.fillText('⚡ ZEUS ORACLE', cx, 122);
-        ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = '400 21px Georgia, serif';
-        ctx.fillText('AI INSIGHT & REFLECTION', cx, 158);
+            const bg = ctx.createLinearGradient(0, 0, W, H);
+            bg.addColorStop(0, '#0d0d14'); bg.addColorStop(0.55, '#171622'); bg.addColorStop(1, '#0d0d14');
+            ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+            ctx.strokeStyle = 'rgba(201,162,39,0.35)'; ctx.lineWidth = 2;
+            ctx.strokeRect(48, 48, W - 96, H - 96);
 
-        let y = 258;
-        if (question) {
-            ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = 'italic 400 24px Georgia, serif';
-            ctx.fillText('You asked', cx, y); y += 46;
-            ctx.fillStyle = '#ffffff';
-            const qLines = wrapText('“' + question + '”', W - 220, '500 38px Georgia, serif');
-            ctx.font = '500 38px Georgia, serif';
-            for (const ln of qLines.slice(0, 3)) { ctx.fillText(ln, cx, y); y += 50; }
-        }
-
-        const labels = ['PAST', 'PRESENT', 'FUTURE'];
-        if (cards && cards.length === 3) {
-            y += 40;
-            const colW = (W - 160) / 3, startX = 80;
-            for (let i = 0; i < 3; i++) {
-                const colCx = startX + colW * i + colW / 2;
-                const cardW = 150, cardH = 230, cardX = colCx - cardW / 2, cardY = y;
-                const grad = ctx.createLinearGradient(cardX, cardY, cardX, cardY + cardH);
-                grad.addColorStop(0, 'rgba(201,162,39,0.18)'); grad.addColorStop(1, 'rgba(29,158,117,0.12)');
-                ctx.fillStyle = grad; ctx.fillRect(cardX, cardY, cardW, cardH);
-                ctx.strokeStyle = 'rgba(232,199,102,0.55)'; ctx.lineWidth = 1.5;
-                ctx.strokeRect(cardX, cardY, cardW, cardH);
-                ctx.fillStyle = 'rgba(232,199,102,0.6)'; ctx.font = '46px Georgia, serif';
-                ctx.fillText('✦', colCx, cardY + cardH / 2 + 4);
-                if (reversed && reversed[i]) {
-                    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '400 16px Georgia, serif';
-                    ctx.fillText('↓ reversed', colCx, cardY + cardH - 16);
+            const cx = W / 2;
+            const wrapText = (text, maxWidth, font) => {
+                ctx.font = font;
+                const words = (text || '').split(/\s+/);
+                const lines = []; let line = '';
+                for (const w of words) {
+                    const test = line ? line + ' ' + w : w;
+                    if (ctx.measureText(test).width > maxWidth && line) { lines.push(line); line = w; }
+                    else line = test;
                 }
-                ctx.fillStyle = '#E8C766'; ctx.font = '600 20px Georgia, serif';
-                ctx.fillText(labels[i], colCx, cardY + cardH + 34);
-                ctx.fillStyle = 'rgba(255,255,255,0.85)';
-                const nameLines = wrapText(cards[i], colW - 8, '400 22px Georgia, serif');
-                ctx.font = '400 22px Georgia, serif';
-                let ny = cardY + cardH + 62;
-                for (const ln of nameLines.slice(0, 2)) { ctx.fillText(ln, colCx, ny); ny += 26; }
+                if (line) lines.push(line);
+                return lines;
+            };
+
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#E8C766'; ctx.font = '600 34px Georgia, serif';
+            ctx.fillText('⚡ ZEUS ORACLE', cx, 122);
+            ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = '400 21px Georgia, serif';
+            ctx.fillText('AI INSIGHT & REFLECTION', cx, 158);
+
+            let y = 258;
+            if (question) {
+                ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = 'italic 400 24px Georgia, serif';
+                ctx.fillText('You asked', cx, y); y += 46;
+                ctx.fillStyle = '#ffffff';
+                const qLines = wrapText('“' + question + '”', W - 220, '500 38px Georgia, serif');
+                ctx.font = '500 38px Georgia, serif';
+                for (const ln of qLines.slice(0, 3)) { ctx.fillText(ln, cx, y); y += 50; }
             }
-            y += 230 + 130;
-        } else { y += 50; }
 
-        ctx.strokeStyle = 'rgba(201,162,39,0.4)'; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.moveTo(cx - 90, y); ctx.lineTo(cx + 90, y); ctx.stroke();
-        y += 56;
+            const labels = ['PAST', 'PRESENT', 'FUTURE'];
+            if (cards && cards.length === 3) {
+                y += 40;
+                const colW = (W - 160) / 3, startX = 80;
+                for (let i = 0; i < 3; i++) {
+                    const colCx = startX + colW * i + colW / 2;
+                    const cardW = 150, cardH = 230, cardX = colCx - cardW / 2, cardY = y;
+                    const img = useImages ? imgs[i] : null;
+                    if (img) {
+                        // draw the real card image (cover-fit, rotated 180° if reversed)
+                        ctx.save();
+                        ctx.beginPath(); ctx.rect(cardX, cardY, cardW, cardH); ctx.clip();
+                        if (reversed && reversed[i]) {
+                            ctx.translate(cardX + cardW / 2, cardY + cardH / 2);
+                            ctx.rotate(Math.PI);
+                            ctx.translate(-(cardX + cardW / 2), -(cardY + cardH / 2));
+                        }
+                        const ir = img.width / img.height, cr = cardW / cardH;
+                        let dw, dh, dx, dy;
+                        if (ir > cr) { dh = cardH; dw = cardH * ir; dx = cardX - (dw - cardW) / 2; dy = cardY; }
+                        else { dw = cardW; dh = cardW / ir; dx = cardX; dy = cardY - (dh - cardH) / 2; }
+                        ctx.drawImage(img, dx, dy, dw, dh);
+                        ctx.restore();
+                        ctx.strokeStyle = 'rgba(232,199,102,0.65)'; ctx.lineWidth = 2;
+                        ctx.strokeRect(cardX, cardY, cardW, cardH);
+                    } else {
+                        // placeholder fallback
+                        const grad = ctx.createLinearGradient(cardX, cardY, cardX, cardY + cardH);
+                        grad.addColorStop(0, 'rgba(201,162,39,0.18)'); grad.addColorStop(1, 'rgba(29,158,117,0.12)');
+                        ctx.fillStyle = grad; ctx.fillRect(cardX, cardY, cardW, cardH);
+                        ctx.strokeStyle = 'rgba(232,199,102,0.55)'; ctx.lineWidth = 1.5;
+                        ctx.strokeRect(cardX, cardY, cardW, cardH);
+                        ctx.fillStyle = 'rgba(232,199,102,0.6)'; ctx.font = '46px Georgia, serif';
+                        ctx.fillText('✦', colCx, cardY + cardH / 2 + 4);
+                    }
+                    // label + card name (+ reversed marker) below the card
+                    ctx.fillStyle = '#E8C766'; ctx.font = '600 20px Georgia, serif';
+                    ctx.fillText(labels[i], colCx, cardY + cardH + 34);
+                    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+                    const nm = cards[i] + ((reversed && reversed[i]) ? ' (reversed)' : '');
+                    const nameLines = wrapText(nm, colW - 8, '400 22px Georgia, serif');
+                    ctx.font = '400 22px Georgia, serif';
+                    let ny = cardY + cardH + 62;
+                    for (const ln of nameLines.slice(0, 2)) { ctx.fillText(ln, colCx, ny); ny += 26; }
+                }
+                y += 230 + 130;
+            } else { y += 50; }
 
-        if (oneLine) {
-            ctx.fillStyle = '#E8C766'; ctx.font = '600 23px Georgia, serif';
-            ctx.fillText('THE MIRROR SHOWED', cx, y); y += 48;
-            ctx.fillStyle = 'rgba(255,255,255,0.92)';
-            const iLines = wrapText(oneLine, W - 200, 'italic 400 32px Georgia, serif');
-            ctx.font = 'italic 400 32px Georgia, serif';
-            for (const ln of iLines.slice(0, 4)) { ctx.fillText(ln, cx, y); y += 44; }
+            ctx.strokeStyle = 'rgba(201,162,39,0.4)'; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.moveTo(cx - 90, y); ctx.lineTo(cx + 90, y); ctx.stroke();
+            y += 56;
+
+            if (oneLine) {
+                ctx.fillStyle = '#E8C766'; ctx.font = '600 23px Georgia, serif';
+                ctx.fillText('THE MIRROR SHOWED', cx, y); y += 48;
+                ctx.fillStyle = 'rgba(255,255,255,0.92)';
+                const iLines = wrapText(oneLine, W - 200, 'italic 400 32px Georgia, serif');
+                ctx.font = 'italic 400 32px Georgia, serif';
+                for (const ln of iLines.slice(0, 4)) { ctx.fillText(ln, cx, y); y += 44; }
+            }
+
+            ctx.fillStyle = '#E8C766'; ctx.font = '600 30px Georgia, serif';
+            ctx.fillText('See what you\'re not seeing', cx, H - 130);
+            ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '600 26px Georgia, serif';
+            ctx.fillText('⚡ Zeus Oracle · en.zeustarot.com', cx, H - 88);
+            return c;
         }
 
-        ctx.fillStyle = '#E8C766'; ctx.font = '600 30px Georgia, serif';
-        ctx.fillText('See what you\'re not seeing', cx, H - 130);
-        ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '600 26px Georgia, serif';
-        ctx.fillText('⚡ Zeus Oracle · en.zeustarot.com', cx, H - 88);
-
-        c.toBlob((blob) => resolve(blob), 'image/png');
-    });
+        // Try with real images; if the canvas taints (CORS blocked), re-render with placeholders.
+        try {
+            render(true).toBlob((blob) => {
+                if (blob) { resolve(blob); return; }
+                try { render(false).toBlob((b2) => resolve(b2), 'image/png'); }
+                catch (e2) { resolve(null); }
+            }, 'image/png');
+        } catch (e) {
+            try { render(false).toBlob((b2) => resolve(b2), 'image/png'); }
+            catch (e2) { resolve(null); }
+        }
+    }));
 }
 
 function onStreamComplete(fullText) {
