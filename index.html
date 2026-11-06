@@ -923,22 +923,6 @@ async function handlePayment(plan = 'monthly') {
             return;
         }
 
-        if (checkoutData.test_mode || !checkoutRes.ok) {
-            const testRes = await fetch(`${WORKER_URL}/unlock-test`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ plan }),
-            });
-            const testData = await testRes.json();
-            if (testData.ok && testData.token) {
-                unlockPremium(plan, testData.token);
-                hidePaywall();
-                alert(`✅ Test unlock complete!\n\n${planData.name} active.`);
-                return;
-            }
-            throw new Error(testData.error || 'unlock failed');
-        }
-
         throw new Error(checkoutData.error || 'checkout failed');
     } catch (e) {
         console.error('Payment error:', e);
@@ -974,22 +958,6 @@ async function checkPaymentOnReturn() {
     const testMode  = params.get('test_mode');
     const planParam = params.get('plan');
     const creemReturn = params.get('creem_return');
-
-    if (testMode === 'true' && planParam) {
-        try {
-            const res = await fetch(`${WORKER_URL}/unlock-test`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ plan: planParam }),
-            });
-            const data = await res.json();
-            if (data.ok && data.token) {
-                unlockPremium(planParam, data.token);
-            }
-        } catch (e) { console.warn('test unlock failed:', e); }
-        window.history.replaceState({}, '', window.location.pathname);
-        return;
-    }
 
     // Creem signed return — collect ALL query params and let the worker verify the HMAC signature.
     if (creemReturn) {

@@ -3019,6 +3019,22 @@ const PLANS = {
   yearly:   { id: 'yearly',   durationMs: 365 * 24 * 60 * 60 * 1000,  deepPerDay: 3, basicPerDay: 10, priceCents: 5900 },
   // dev: unlimited readings for testing — never expose to real users
 };
+// [2026-11-06] Map a Creem checkout object to our plan, using only server-trusted data:
+// 1) the metadata.plan we set ourselves when creating the checkout, 2) the product id.
+function planFromCheckout(env, checkout) {
+  if (!checkout) return null;
+  const meta = checkout.metadata || (checkout.order && checkout.order.metadata) || {};
+  const prod = checkout.product;
+  const pid = typeof prod === 'string' ? prod : (prod && prod.id) || (checkout.order && checkout.order.product) || '';
+  let byProduct = null;
+  for (const k of Object.keys(PLANS)) {
+    const envId = env && env[`CREEM_PRODUCT_${k.toUpperCase()}`];
+    if (envId && pid && String(envId) === String(pid)) { byProduct = k; break; }
+  }
+  const byMeta = (meta.plan && isValidPlan(meta.plan) && meta.plan !== 'dev') ? meta.plan : null;
+  if (byProduct && byMeta && byProduct !== byMeta) return byProduct; // product id wins
+  return byProduct || byMeta || null;
+}
 function isValidPlan(plan) {
   return typeof plan === 'string' && Object.prototype.hasOwnProperty.call(PLANS, plan);
 }
@@ -4017,9 +4033,36 @@ export default {
             { status: 402, headers: corsHeaders() });
         }
 
-        // Confirmed paid — issue token. Prefer plan from params, fall back to monthly.
-        const plan = (params.plan && isValidPlan(params.plan) && params.plan !== 'dev') ? params.plan : 'monthly';
+        // [2026-11-06 security] Plan comes ONLY from what Creem says was bought — never from the
+        // return-URL params (a $0.99 trial could otherwise be turned into a yearly token by editing ?plan=).
+        const plan = planFromCheckout(env, checkout);
+        if (!plan) {
+          console.warn('[verify-payment] cannot map checkout to a plan', checkoutId);
+          return new Response(JSON.stringify({ ok: false, error: 'Could not match this payment to a plan. Please contact support.' }),
+            { status: 409, headers: corsHeaders() });
+        }
+
+        // [2026-11-06 security] One checkout = one token. Re-verifying the same checkout_id
+        // (page refresh, retry) returns the SAME token instead of minting new ones forever.
+        const kv = getKV(env);
+        const usedKey = `creem_ck:${checkoutId}`;
+        if (kv) {
+          try {
+            const prev = await kv.get(usedKey);
+            if (prev) {
+              const p = JSON.parse(prev);
+              return new Response(JSON.stringify({ ok: true, token: p.token, plan: p.plan, reused: true }),
+                { status: 200, headers: corsHeaders() });
+            }
+          } catch (_) { /* fall through and issue */ }
+        }
         const token = await issueToken(env, plan);
+        if (kv) {
+          try {
+            const ttl = Math.ceil((PLANS[plan] || PLANS.monthly).durationMs / 1000) + 86400;
+            await kv.put(usedKey, JSON.stringify({ token, plan, at: Date.now() }), { expirationTtl: ttl });
+          } catch (_) { /* non-fatal */ }
+        }
         return new Response(JSON.stringify({ ok: true, token, plan }),
           { status: 200, headers: corsHeaders() });
       } catch (err) {
@@ -4460,7 +4503,7 @@ export default {
     }
 
     // ---- Fallback ----
-    return new Response(JSON.stringify({ ok: true, service: 'ZEUS AI ORACLE — EN', endpoints: ['/oracle', '/create-checkout-session', '/unlock-test', '/verify-payment', '/revoke', '/health'] }),
+    return new Response(JSON.stringify({ ok: true, service: 'ZEUS AI ORACLE — EN', endpoints: ['/oracle', '/create-checkout-session', '/verify-payment', '/revoke', '/health'] }),
       { status: 200, headers: corsHeaders() });
   }
 };
