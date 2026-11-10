@@ -3236,6 +3236,36 @@ function detectDependencyPattern(prevContext, domain, prompt) {
   return null;
 }
 
+// [2026-11-10 security] Only real card names may reach the AI prompt.
+// Returns a clean CSV of 1-3 known cards, or null if anything else was sent.
+function validateCardsCSV(cardsCSV) {
+  const list = String(cardsCSV || '').split(',').map(c => c.replace(/\s*\(.*?\)/g, '').trim()).filter(Boolean);
+  if (list.length < 1 || list.length > 3) return null;
+  for (const c of list) {
+    if (!Object.prototype.hasOwnProperty.call(CARD_SCORE, c)) return null;
+  }
+  return list.join(',');
+}
+
+// [2026-11-10 security] prevContext comes from the browser (localStorage) — keep only the
+// known fields, in their known shapes, so free text can never be smuggled into the AI prompt.
+const _PC_VERDICTS = ['fading', 'suspended', 'opening', 'steady', 'unsettled'];
+const _PC_DOMAINS = ['love', 'fortune', 'decision', 'stock'];
+function sanitizePrevContext(pc) {
+  if (!pc || typeof pc !== 'object' || Array.isArray(pc)) return null;
+  const out = {};
+  if (typeof pc.lastDomain === 'string' && _PC_DOMAINS.includes(pc.lastDomain)) out.lastDomain = pc.lastDomain;
+  if (typeof pc.lastLens === 'string' && /^[a-zA-Z_-]{1,40}$/.test(pc.lastLens)) out.lastLens = pc.lastLens;
+  if (typeof pc.lastVerdict === 'string' && _PC_VERDICTS.includes(pc.lastVerdict)) out.lastVerdict = pc.lastVerdict;
+  if (Array.isArray(pc.lexicalEchoes)) {
+    out.lexicalEchoes = pc.lexicalEchoes.filter(w => typeof w === 'string' && /^[a-z]{3,20}$/.test(w)).slice(0, 5);
+  }
+  if (typeof pc.ts === 'number' && isFinite(pc.ts)) out.ts = pc.ts;
+  if (typeof pc.sameDomainStreak === 'number' && isFinite(pc.sameDomainStreak)) out.sameDomainStreak = pc.sameDomainStreak;
+  if (typeof pc.lastQuestion === 'string') out.lastQuestion = pc.lastQuestion.slice(0, 500);
+  return out;
+}
+
 function corsHeaders() {
   return {
     'Access-Control-Allow-Origin': '*',
@@ -3313,6 +3343,7 @@ const EN_BLOCKED_PATTERNS = [
 async function handleZeusShieldEN(request, env, jti, question) {
   const kv = getKV(env);
 
+  // [2026-11-10 security] Question checks run even when KV is unbound (they need no storage).
   // [0] GLOBAL EMERGENCY KILL SWITCH
   // Manually set SYSTEM_LOCK="true" in KV to halt all readings immediately.
   if (kv) {
@@ -3338,6 +3369,7 @@ async function handleZeusShieldEN(request, env, jti, question) {
   // Guest users (no jti) — only apply concurrency lock, skip usage tracking.
   // Free users don't get deep readings anyway (gated by premium check),
   // so tracking guest usage would only cause false positives.
+  if (!kv) return null; // [2026-11-10] KV unbound → fail open BEFORE any kv.get (guests used to crash here)
   if (!jti) {
     const guestKey = `active_en:guest:${fp}:${ip}`;
     const guestActive = await kv.get(guestKey);
@@ -4088,10 +4120,18 @@ export default {
           { status: 400, headers: corsHeaders() });
       }
 
+      if (!body || typeof body !== 'object') body = {};
       const prompt = (body.prompt || '').toString();
-      const cardsCSV = (body.cards || '').toString();
-      const reversedCSV = (body.reversed || '').toString();
+      // [2026-11-10 security] cards must be 1-3 real card names; anything else is rejected
+      // before any lock is taken or any AI call is made.
+      const cardsCSV = validateCardsCSV(body.cards);
+      if (!cardsCSV) {
+        return new Response(JSON.stringify({ error: 'No cards provided' }),
+          { status: 400, headers: corsHeaders() });
+      }
+      const reversedCSV = (body.reversed || '').toString().slice(0, 40);
       const isLeverage = body.leverage === true;
+      body.prevContext = sanitizePrevContext(body.prevContext);
 
       // ── ZEUS SHIELD EN (security layer) ──────────────────────────────
       // Runs BEFORE crisis check and Gemini call.
@@ -4113,6 +4153,8 @@ export default {
       // Route to real help instead. This overrides everything else.
       // Sent as an SSE stream (data: ...) so the frontend's stream parser reads it.
       if (detectCrisisSignal(prompt)) {
+        // [2026-11-10] release the concurrency lock — no reading runs on this path
+        try { const _kv = getKV(env); if (_kv && _shieldData && _shieldData.concurrentKey) await _kv.delete(_shieldData.concurrentKey); } catch (_) {}
         const enc = new TextEncoder();
         const crisisStream = new ReadableStream({
           start(controller) {
@@ -4341,7 +4383,6 @@ export default {
             const apiKey = env.GEMINI_API_KEY;
             // Log prompt sizes to detect token bloat
             console.log(`[ZEUS] systemPrompt: ${systemPrompt.length} chars, userPrompt: ${userPrompt.length} chars, total: ${systemPrompt.length + userPrompt.length} chars`);
-            console.log('userPrompt:', userPrompt);
             if (!apiKey) {
               send({ _type: 'token', text: metrics.finalOracle || 'Reading energy computed; AI narration unavailable (no API key).' });
               send({ _type: 'done' });
@@ -4383,7 +4424,7 @@ export default {
               // Release concurrency lock immediately (don't rely on finally during stream close)
               try { const _kv = getKV(env); if (_kv && _shieldData && _shieldData.concurrentKey) await _kv.delete(_shieldData.concurrentKey); } catch (_) {}
               send({ _type: 'token', text: metrics.finalOracle || 'AI narration unavailable.' });
-              send({ _type: 'error', message: `Gemini error ${gemResp.status}: ${errText.slice(0, 200)}` });
+              send({ _type: 'error', message: 'The reading could not be completed. Please try again.' }); // details stay in server logs only
               send({ _type: 'done' });
               controller.close();
               return;
@@ -4437,7 +4478,8 @@ export default {
           } catch (err) {
             // ── Shield rollback: Gemini failed → don't penalise user ──
             await rollbackShieldEN(env, _shieldData);
-            try { send({ _type: 'error', message: err.message }); } catch (_) {}
+            console.log('[oracle] stream error:', err && err.message);
+            try { send({ _type: 'error', message: 'The reading could not be completed. Please try again.' }); } catch (_) {}
             try { controller.close(); } catch (_) {}
           } finally {
             // Always release concurrency lock — prevent stuck lock on any exit path

@@ -1575,7 +1575,7 @@ async function streamReading(question, drawn, reversed) {
                         try {
                             contentEl.innerHTML = renderStreamText(fullText);
                         } catch (renderErr) {
-                            contentEl.innerHTML = fullText.replace(/\n/g, '<br>');
+                            contentEl.innerHTML = fullText.replace(/</g, '&lt;').replace(/\n/g, '<br>');
                         }
                     } else if (parsed._type === 'done') {
                         onStreamComplete(fullText);
@@ -1607,7 +1607,8 @@ function renderStreamText(text, isFinal) {
         'Future':          '#9B59B6',
         'ZEUS Final Oracle': '#D4AF37',
     };
-    let html = text;
+    // [2026-11-10 security] AI text is plain text — neutralise '<' so it can never become page markup.
+    let html = String(text == null ? '' : text).replace(/</g, '&lt;');
     // Extract the AI-generated end blocks (lens-aware) and stash them.
     // Three blocks: GUIDE_START/END (3 lines), CAUTION_START/END (1-2 lines), CLOSING_START/END (1 line).
     // Hide from the main oracle body.
