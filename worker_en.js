@@ -2189,7 +2189,7 @@ function buildFortuneMetrics({ totalScore, riskScore, cleanCards, reversedFlags,
   }
 
   const strainPct = strainPercent(riskScore);
-  const riskLevel = ["moderate", "elevated", "high"][strainBand(strainPct)];
+  const riskLevel = ["low", "moderate", "high"][strainBand(strainPct)];
 
   const moonPhase = getMoonPhase();
   const numerology = getNumerologyTime();
@@ -2797,7 +2797,7 @@ function buildLoveMetrics({ totalScore, riskScore, cleanCards, reversedFlags, pr
   }
 
   const strainPct = strainPercent(riskScore, rel.instability, rel.obsession);
-  const riskLevel = ["moderate", "elevated", "high"][strainBand(strainPct)];
+  const riskLevel = ["low", "moderate", "high"][strainBand(strainPct)];
 
   const posLabels = ["Past", "Present", "Future"];
   const cardNarrative = cleanCards.map((c, i) => {
