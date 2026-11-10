@@ -3068,8 +3068,10 @@ async function importHmacKey(secret) {
   );
 }
 function getTokenSecret(env) {
-  // Set via `wrangler secret put TOKEN_SECRET`. Dev fallback only.
-  return (env && env.TOKEN_SECRET) ? env.TOKEN_SECRET : 'DEV_ONLY_INSECURE_SECRET_CHANGE_ME';
+  // [2026-11-10 security] No fallback secret. If TOKEN_SECRET is not set, tokens can be
+  // neither issued nor verified (fail closed) — a publicly known default would let anyone forge one.
+  const s = env && env.TOKEN_SECRET;
+  return (typeof s === 'string' && s.length > 0) ? s : null;
 }
 
 // ── KV helpers (optional). If no KV namespace is bound, these no-op safely so
@@ -3090,7 +3092,9 @@ async function issueToken(env, plan) {
   const jti = randomJti();
   const payload = { plan, iat: now, exp: now + planDef.durationMs, jti };
   const payloadB64 = b64urlEncode(utf8(JSON.stringify(payload)));
-  const key = await importHmacKey(getTokenSecret(env));
+  const _secret = getTokenSecret(env);
+  if (!_secret) throw new Error('TOKEN_SECRET not configured');
+  const key = await importHmacKey(_secret);
   const sig = await crypto.subtle.sign('HMAC', key, utf8(payloadB64));
   return `${payloadB64}.${b64urlEncode(sig)}`;
 }
@@ -3100,7 +3104,9 @@ async function verifyToken(env, token) {
     if (!token || typeof token !== 'string' || token.indexOf('.') < 0) return null;
     const [payloadB64, sigB64] = token.split('.');
     if (!payloadB64 || !sigB64) return null;
-    const key = await importHmacKey(getTokenSecret(env));
+    const _secret = getTokenSecret(env);
+    if (!_secret) return null; // not configured -> no token is valid
+    const key = await importHmacKey(_secret);
     const ok = await crypto.subtle.verify('HMAC', key, b64urlDecodeToBytes(sigB64), utf8(payloadB64));
     if (!ok) return null;
     const payload = JSON.parse(bytesToStr(b64urlDecodeToBytes(payloadB64)));
@@ -3132,13 +3138,14 @@ async function revokeToken(env, jti, ttlSeconds) {
 }
 
 // ── Rate limiting (per-IP, fixed window). KV-backed; no-op if KV unbound. ──
-async function checkRateLimit(env, request, limit, windowSec) {
+async function checkRateLimit(env, request, limit, windowSec, bucket) {
   const kv = getKV(env);
   if (!kv) return { ok: true }; // no KV -> don't block
   const ip = request.headers.get('CF-Connecting-IP')
     || request.headers.get('X-Forwarded-For') || 'unknown';
   const windowId = Math.floor(Date.now() / 1000 / windowSec);
-  const slot = `rl:${ip}:${windowId}`;
+  // bucket (optional) keeps payment counters separate from reading counters
+  const slot = bucket ? `rl:${bucket}:${ip}:${windowId}` : `rl:${ip}:${windowId}`;
   try {
     const cur = parseInt(await kv.get(slot) || '0', 10);
     if (cur >= limit) return { ok: false, retryAfter: windowSec };
@@ -3968,6 +3975,17 @@ export default {
     //    Otherwise return { test_mode: true } so the frontend falls back to /unlock-test.
     if (url.pathname === '/create-checkout-session' && request.method === 'POST') {
       try {
+        // [2026-11-10 security] 10 requests / minute per IP on payment endpoints.
+        const _rlPay = await checkRateLimit(env, request, 10, 60, 'pay_create');
+        if (!_rlPay.ok) {
+          return new Response(JSON.stringify({ ok: false, error: 'Too many requests. Please wait a minute and try again.' }),
+            { status: 429, headers: { ...corsHeaders(), 'Retry-After': '60' } });
+        }
+        // [2026-11-10 security] Never start a checkout if we could not issue a token afterwards.
+        if (!getTokenSecret(env)) {
+          return new Response(JSON.stringify({ ok: false, error: 'Payments are temporarily unavailable.' }),
+            { status: 503, headers: corsHeaders() });
+        }
         const body = await request.json().catch(() => ({}));
         const plan = body && body.plan;
         if (!isValidPlan(plan) || plan === 'dev') {
@@ -3982,9 +4000,12 @@ export default {
         if (creemKey && productId && !String(productId).includes('TODO')) {
           // success_url must point to the FRONTEND (en.zeustarot.com), not the worker.
           // Prefer the request's Origin header; fall back to configured FRONTEND_URL or the known domain.
-          const reqOrigin = request.headers.get('Origin')
-            || (env && env.FRONTEND_URL)
-            || 'https://en.zeustarot.com';
+          // [2026-11-10 security] The return address is fixed to our own site. The request's Origin
+          // header is only honoured if it is exactly one of ours; anything else falls back.
+          const _defaultFront = String((env && env.FRONTEND_URL) || 'https://en.zeustarot.com').replace(/\/+$/, '');
+          const _allowedFronts = ['https://en.zeustarot.com', _defaultFront];
+          const _hdrOrigin = request.headers.get('Origin') || '';
+          const reqOrigin = _allowedFronts.includes(_hdrOrigin) ? _hdrOrigin : _defaultFront;
           const reqId = `zeus_${plan}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
           // test keys (creem_test_*) must use the test API host; live keys use production.
           const creemBase = String(creemKey).startsWith('creem_test_')
@@ -4029,9 +4050,19 @@ export default {
     //    Frontend expects { ok: true, token, plan }.
     if (url.pathname === '/verify-payment' && request.method === 'POST') {
       try {
+        // [2026-11-10 security] 10 requests / minute per IP.
+        const _rlPay = await checkRateLimit(env, request, 10, 60, 'pay_verify');
+        if (!_rlPay.ok) {
+          return new Response(JSON.stringify({ ok: false, error: 'Too many requests. Please wait a minute and try again.' }),
+            { status: 429, headers: { ...corsHeaders(), 'Retry-After': '60' } });
+        }
+        if (!getTokenSecret(env)) {
+          return new Response(JSON.stringify({ ok: false, error: 'Service not configured. Please contact support.' }),
+            { status: 503, headers: corsHeaders() });
+        }
         const body = await request.json().catch(() => ({}));
         const params = (body && body.params) || {};
-        const checkoutId = params.checkout_id;
+        const checkoutId = (typeof params.checkout_id === 'string') ? params.checkout_id.slice(0, 200) : '';
         const creemKey = env && env.CREEM_API_KEY;
 
         if (!creemKey) {
