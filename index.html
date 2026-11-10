@@ -2272,6 +2272,8 @@ function renderDecisionLayersEN(layers) {
     const _lensActive = (SERVER_METRICS && SERVER_METRICS.lens) || '';
     const _showDeep = (_gravTier === 'subtle' || _gravTier === 'dominant')
                    || (/high|elevated/i.test(_riskLevel))
+                   // [2026-11-10] love/fortune bands are now low/moderate/high (40-69% = moderate, formerly 'elevated')
+                   || (_riskLevel === 'moderate' && Number(SERVER_METRICS && SERVER_METRICS.riskScore) >= 40)
                    || (_lensActive === 'grief');
 
     if (_showDeep && ci && (ci.summary || ci.detail || (typeof ci === 'string' && ci.length))) {
