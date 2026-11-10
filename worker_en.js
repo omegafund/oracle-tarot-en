@@ -96,6 +96,29 @@ function analyzeRelationship(cardNames = []) {
   };
 }
 
+// [2026-11-10] ONE basis for the displayed strain % and the risk level.
+// Before: the level looked at card points AND relationship signals (instability / obsession),
+// while the displayed number was the raw card points with a "%" sign — so "5%" could sit
+// next to "high". Now both come from this single 0-100 figure:
+//   0-39 = lowest band, 40-69 = middle band, 70-100 = highest band.
+// The band cut-offs reproduce the old level rules exactly (points 4 / 7, instability 50 / 80,
+// obsession 80), so levels do not change — only the number now tells the same story.
+function strainPercent(points, instability, obsession) {
+  let pct = Math.max(0, Math.min(100, Math.floor((Number(points) || 0) * 10)));
+  if (typeof instability === 'number') {
+    const i = instability;
+    const fromInst = i >= 80 ? 70 + Math.round((i - 80) * 1.5)
+                   : i >= 50 ? 40 + Math.min(29, Math.floor(i - 50))
+                   : Math.max(0, Math.min(39, Math.round(i * 0.8)));
+    pct = Math.max(pct, Math.min(100, fromInst));
+  }
+  if (typeof obsession === 'number' && obsession >= 80) {
+    pct = Math.max(pct, Math.min(100, 70 + Math.round((obsession - 80) * 1.5)));
+  }
+  return pct;
+}
+function strainBand(pct) { return pct >= 70 ? 2 : pct >= 40 ? 1 : 0; }
+
 /* ════════════════════════════════════════
    CARD_MEANING (flow / signal / deep)
 ════════════════════════════════════════ */
@@ -2165,9 +2188,8 @@ function buildFortuneMetrics({ totalScore, riskScore, cleanCards, reversedFlags,
           ]);
   }
 
-  let riskLevel = "moderate";
-  if (riskScore >= 7) riskLevel = "high";
-  else if (riskScore >= 4) riskLevel = "elevated";
+  const strainPct = strainPercent(riskScore);
+  const riskLevel = ["moderate", "elevated", "high"][strainBand(strainPct)];
 
   const moonPhase = getMoonPhase();
   const numerology = getNumerologyTime();
@@ -2302,7 +2324,7 @@ function buildFortuneMetrics({ totalScore, riskScore, cleanCards, reversedFlags,
   return {
     domain: isDecision ? "decision" : "fortune",
     trend, action, riskLevel,
-    totalScore, riskScore,
+    totalScore, riskScore: strainPct, riskPoints: riskScore,
     moonPhase, numerology,
     cardNarrative, flowSummary, scenarios, roadmap,
     finalOracle,
@@ -2439,9 +2461,8 @@ function runWealthEngine(ctx) {
     : ACTION_LABEL[energyKey];
 
   // Risk reframed as "turbulence", purely symbolic.
-  let riskLevel = "steady";
-  if (riskScore >= 7) riskLevel = "turbulent";
-  else if (riskScore >= 4) riskLevel = "shifting";
+  const strainPct = strainPercent(riskScore);
+  const riskLevel = ["steady", "shifting", "turbulent"][strainBand(strainPct)];
 
   const posLabels = ["Past", "Present", "Future"];
   const cardNarrative = cleanCards.map((c, i) => {
@@ -2552,7 +2573,7 @@ function runWealthEngine(ctx) {
     domain: 'stock',
     subjectName,
     trend, action, riskLevel,
-    totalScore, riskScore,
+    totalScore, riskScore: strainPct, riskPoints: riskScore,
     volatilityScore: calcScore(cleanCards, 'vol'),   // shown as an abstract "energy intensity" %
     cardNarrative, flowSummary,
     finalOracle,
@@ -2775,9 +2796,8 @@ function buildLoveMetrics({ totalScore, riskScore, cleanCards, reversedFlags, pr
     position = "Observe & wait";
   }
 
-  let riskLevel = "moderate";
-  if (rel.instability >= 80 || riskScore >= 7 || rel.obsession >= 80) riskLevel = "high";
-  else if (rel.instability >= 50 || riskScore >= 4) riskLevel = "elevated";
+  const strainPct = strainPercent(riskScore, rel.instability, rel.obsession);
+  const riskLevel = ["moderate", "elevated", "high"][strainBand(strainPct)];
 
   const posLabels = ["Past", "Present", "Future"];
   const cardNarrative = cleanCards.map((c, i) => {
@@ -2890,7 +2910,7 @@ function buildLoveMetrics({ totalScore, riskScore, cleanCards, reversedFlags, pr
   return {
     domain: "love",
     trend, action, riskLevel,
-    totalScore, riskScore,
+    totalScore, riskScore: strainPct, riskPoints: riskScore,
     relationship: rel,
     cardNarrative, flowSummary,
     finalOracle,
@@ -4292,10 +4312,18 @@ export default {
                 const FREE_KEY = 'GLOBAL_DAILY_FREE_PREVIEW_EN';
                 const FREE_CAP = 2000; // tunable daily ceiling for free AI previews
                 const freeUsed = _kv ? parseInt(await _kv.get(FREE_KEY) || '0', 10) : 0;
-                if (_apiKey && freeUsed < FREE_CAP) {
+                // [2026-11-10] Per-person ceiling: 20 free AI previews per IP per (UTC) day.
+                // Over the ceiling the visitor still gets the template line below — never an error.
+                const FREE_PER_IP_CAP = 20;
+                const _freeIp = request.headers.get('CF-Connecting-IP')
+                  || request.headers.get('X-Forwarded-For') || 'unknown';
+                const _freeIpKey = `free_prev_ip:${_freeIp}:${_todayKey()}`;
+                const freeIpUsed = _kv ? parseInt(await _kv.get(_freeIpKey) || '0', 10) : 0;
+                if (_apiKey && freeUsed < FREE_CAP && freeIpUsed < FREE_PER_IP_CAP) {
                   pastText = await generatePastOnlyEN(_apiKey, domain, subject, sc.cleanCards[0], sc.reversedFlags[0], prompt);
                   if (pastText && _kv) {
                     await _kv.put(FREE_KEY, String(freeUsed + 1), { expirationTtl: 86400 });
+                    await _kv.put(_freeIpKey, String(freeIpUsed + 1), { expirationTtl: 26 * 60 * 60 });
                   }
                 }
               } catch (_) { pastText = null; }
@@ -4426,7 +4454,7 @@ export default {
             const geminiBody = JSON.stringify({
                 system_instruction: { parts: [{ text: systemPrompt }] },
                 contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-                generationConfig: { temperature: 0.85, maxOutputTokens: 8192 },
+                generationConfig: { temperature: 0.85, maxOutputTokens: 8192, thinkingConfig: { thinkingBudget: 0 } },
                 safetySettings: [
                   { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
                   { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
