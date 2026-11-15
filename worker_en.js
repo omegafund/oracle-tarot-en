@@ -3923,7 +3923,8 @@ async function generatePastOnlyEN(apiKey, domain, subject, card, isReversed, que
     "- Interpret ONLY the past. NO reference to the present or future cards.\n" +
     "- NO future implication, NO prediction, NO advice, NO closure or resolution.\n" +
     "- Do NOT hint at what comes next. Name what was; do not resolve it.\n" +
-    "- No headings, no lists, no card-name recital. Just the paragraph.";
+    "- No headings, no lists, no card-name recital. Just the paragraph.\n" +
+    "- Respond exclusively in natural English. Never mix Korean or any other language into the reading.";
   const usr =
     `Past card: ${card}${rev}.\n` +
     `Domain: ${domain}.\n` +
@@ -4009,7 +4010,10 @@ async function zeusGeminiFetch(url, init) {
           const raw = await r.clone().text();
           let txt = raw; try { const j = JSON.parse(raw); txt = (j.candidates || []).map(c => ((c.content && c.content.parts) || []).map(p => p.text || '').join('')).join('') || raw; } catch (_) {}
           const foreign = (txt.match(/[؀-ۿݐ-ݿЀ-ӿ฀-๿ऀ-ॿ֐-׿가-힣一-鿿]/g) || []).length;
-          if (foreign >= 8) { bad = true; console.warn('[GEMINI] foreign-script output', foreign, '-> retry 2.5-flash'); }
+          const letters = (txt.match(/\p{L}/gu) || []).length;
+          const ratio = foreign / Math.max(letters, 1);
+          // [2026-11-16] count rule (8+) OR short-text rule (5+ and at least 5% of letters)
+          if (foreign >= 8 || (foreign >= 5 && ratio >= 0.05)) { bad = true; console.warn('[GEMINI] foreign-script output', foreign, (ratio * 100).toFixed(1) + '%', '-> retry 2.5-flash'); }
         } catch (_) {}
         if (!bad) return r;
       } else {
@@ -4444,6 +4448,7 @@ export default {
             metrics.gravityTier = gravityProfile.tier;
             const systemPrompt = buildSystemPromptEN(domain, subject, relationshipState, loveSubtype, oracleStyle, prompt)
                                + `\n${LENS_NATIVE_PRIORITY}`
+                               + `\nLANGUAGE: Respond exclusively in natural English. Never mix Korean or any other language into the reading.`
                                + (lensPromptBlock ? `\n\n${lensPromptBlock}` : '')
                                + gravityPromptBlock
                                + continuityHint
