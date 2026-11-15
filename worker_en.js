@@ -3942,7 +3942,7 @@ async function generatePastOnlyEN(apiKey, domain, subject, card, isReversed, que
     ]
   });
   try {
-    const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: bodyReq });
+    const resp = await zeusGeminiFetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: bodyReq });
     if (!resp.ok) return null;
     const j = await resp.json();
     const parts = j && j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts || [];
@@ -3975,8 +3975,58 @@ function buildFreeMetrics(metrics) {
   };
 }
 
+// ════════════════════════════════════════════════════════════════════════
+// [2026-11-15] Gemini model switch (gemini-2.5-flash is retired 2026-12-01)
+//   All Gemini calls go through here. Default: gemini-3.5-flash-lite.
+//   If the new model fails (404/400/5xx/network) — or, for non-streaming calls, answers in an
+//   unexpected script (Arabic, Cyrillic, Thai, Devanagari, Hebrew, Hangul, CJK) — the same request is
+//   retried on gemini-2.5-flash. Dashboard variable GEMINI_MODEL overrides (e.g. "gemini-2.5-flash").
+// ════════════════════════════════════════════════════════════════════════
+let ZEUS_GEMINI_MODEL = 'gemini-3.5-flash-lite';
+let _zeusGeminiNextDown = false;
+async function zeusGeminiFetch(url, init) {
+  const OLD = '/models/gemini-2.5-flash:';
+  const target = ZEUS_GEMINI_MODEL;
+  if (typeof url === 'string' && url.includes(OLD) && target && target !== 'gemini-2.5-flash' && !_zeusGeminiNextDown) {
+    let body = init && init.body;
+    try {
+      const b = JSON.parse(body);
+      if (b && b.generationConfig) {
+        delete b.generationConfig.thinkingConfig;  // 3.5 uses thinkingLevel (default minimal)
+        delete b.generationConfig.temperature;
+        delete b.generationConfig.topP;
+        delete b.generationConfig.topK;
+      }
+      body = JSON.stringify(b);
+    } catch (_) {}
+    try {
+      const r = await fetch(url.replace(OLD, `/models/${target}:`), Object.assign({}, init, { body }));
+      if (r.ok) {
+        const isStream = url.includes(':streamGenerateContent');
+        if (isStream) return r;
+        let bad = false;
+        try {
+          const raw = await r.clone().text();
+          let txt = raw; try { const j = JSON.parse(raw); txt = (j.candidates || []).map(c => ((c.content && c.content.parts) || []).map(p => p.text || '').join('')).join('') || raw; } catch (_) {}
+          const foreign = (txt.match(/[؀-ۿݐ-ݿЀ-ӿ฀-๿ऀ-ॿ֐-׿가-힣一-鿿]/g) || []).length;
+          if (foreign >= 8) { bad = true; console.warn('[GEMINI] foreign-script output', foreign, '-> retry 2.5-flash'); }
+        } catch (_) {}
+        if (!bad) return r;
+      } else {
+        if (r.status === 404) _zeusGeminiNextDown = true;
+        console.warn('[GEMINI] next model failed', target, r.status, '-> fallback 2.5-flash');
+      }
+    } catch (e) {
+      if (init && init.signal && init.signal.aborted) throw e;
+      console.warn('[GEMINI] next model error', e && e.message, '-> fallback 2.5-flash');
+    }
+  }
+  return fetch(url, init);
+}
+
 export default {
   async fetch(request, env) {
+    if (env && env.GEMINI_MODEL) ZEUS_GEMINI_MODEL = String(env.GEMINI_MODEL).trim();
     // CORS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders() });
@@ -4466,7 +4516,7 @@ export default {
             let gemResp;
             const RETRYABLE = [429, 500, 502, 503, 504];
             for (let attempt = 0; attempt < 3; attempt++) {
-              gemResp = await fetch(geminiUrl, {
+              gemResp = await zeusGeminiFetch(geminiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: geminiBody
